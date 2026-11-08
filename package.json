@@ -1,0 +1,109 @@
+{
+  "name": "dsh-plugin-dreaming",
+  "version": "0.2.0",
+  "description": "Evidence-linked background memory consolidation for DeepSeek Harness",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.9.0",
+    "dsh": "0.2.2-rc.1"
+  },
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./client": "./client.js"
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "README.en.md",
+    "README.zh-CN.md",
+    "docs",
+    "LICENSE",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "client.js"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "memory",
+    "dreaming",
+    "cordis"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/build-client.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "check": "npm run typecheck && npm test && npm run build",
+    "prepack": "npm run build"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.1.0",
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session-persistence": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session-query": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-tool-executor-native": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-working-directory": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-typert-registry": "0.2.2-rc.1"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.19.0",
+    "proper-lockfile": "^4.1.2",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "~4.1.0",
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-agent-loop": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-agent-loop-testkit": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-ptc-runtime": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session-persistence": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session-projection": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session-query": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session-query-sqlite": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-tool-executor-native": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-working-directory": "0.2.2-rc.1",
+    "@types/node": "^24.0.0",
+    "@types/proper-lockfile": "^4.1.4",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-typert-registry": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-api-gateway": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-api-remote-access": "0.2.2-rc.1",
+    "esbuild": "^0.28.2"
+  }
+}
