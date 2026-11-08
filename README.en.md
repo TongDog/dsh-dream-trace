@@ -2,6 +2,8 @@
 
 [中文主页](README.md) · [中文使用说明](README.zh-CN.md)
 
+**Codex support:** [Dream Trace](codex-plugin/README.md) is a standalone Codex plugin using hooks for evidence capture and MCP for recall, consolidation and rollback. It shares the memory core and does not require Harness. Build its standalone archive with `npm run pack:codex`.
+
 An independent project-memory plugin for **DeepSeek Harness 0.2.2-rc.1**, requiring **Node.js >=24.9.0**. Consolidates completed conversations into evidence-linked observations, corrects outdated notes, injects a bounded index into later sessions, and supports rollback. Version **0.2.0** adds a **Memory** page in the dsh Web sidebar for browsing and managing those records. It is not an official DeepSeek or Anthropic product.
 
 [Install](#install-and-enable) · [Memory page](#memory-page) · [Operations](#operations) · [Architecture](#architecture) · [Configuration](#configuration) · [Development](#development-and-verification)

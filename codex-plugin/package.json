@@ -1,0 +1,10 @@
+{
+  "name": "codex-plugin-dream-trace",
+  "version": "0.1.0",
+  "description": "Evidence-linked project memory for Codex, powered by Dreaming",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=24.9.0" },
+  "bin": { "dream-trace": "dist/cli.mjs" },
+  "files": ["dist", ".codex-plugin", ".claude-plugin", ".mcp.json", "hooks", "skills", "config.example.json", "README.md", "LICENSE"]
+}

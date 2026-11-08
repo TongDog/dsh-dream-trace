@@ -4,6 +4,8 @@
 
 [English](README.en.md) · [中文使用说明](README.zh-CN.md) · [兼容说明](docs/compatibility.md) · [验证记录](docs/verification.md)
 
+**Codex 用户：**本仓库还提供独立的 [Dream Trace 插件](codex-plugin/README.md)，通过 Codex hooks 采集证据、MCP 检索与复盘，共享下述记忆核心。运行 `npm run pack:codex` 可构建独立安装包，无需安装 dsh。[Codex 验证记录](docs/codex-verification.md)。
+
 Dreaming 是一个面向 **DeepSeek Harness（dsh）** 的社区插件。它回看项目内已完成的会话，提炼操作经验、项目决策、偏好、事实和踩坑记录；后续会话先获得一个简短索引，再按需检索详细内容。每条记忆带有原文引用，内容和处理进度一起保存为可恢复的版本。
 
 插件通过 dsh 的 Agent 循环调用已配置的模型，不训练模型或修改模型权重，也不属于 DeepSeek 或 Anthropic 官方产品。

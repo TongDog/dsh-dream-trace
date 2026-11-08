@@ -2,6 +2,8 @@
 
 [项目主页与架构](README.md) · [English](README.en.md)
 
+**Codex 版本：**请看 [Dream Trace 安装与使用说明](codex-plugin/README.md)。它通过 hooks 和 MCP 接入 Codex，无需安装 dsh；本页继续介绍 dsh 版本。
+
 把项目中已完成的会话整理成可追溯、可纠正的长期记忆。支持手动复盘、后台复盘、带来源的记忆检索、后续会话自动加载索引及版本回滚。**0.2.0** 新增 dsh Web 侧栏中的「**记忆**」页面，可直接浏览和管理记忆。
 
 兼容基线：**dsh 0.2.2-rc.1、Node.js >=24.9.0**。这是独立社区插件，不属于 DeepSeek 或 Anthropic 官方产品。只对该版本声明兼容。

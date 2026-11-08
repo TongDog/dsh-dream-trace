@@ -1,0 +1,14 @@
+{
+  "name": "dream-trace",
+  "version": "0.1.0",
+  "description": "Evidence-linked project memory for Codex.",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "hooks": "./hooks/hooks.json",
+  "requires_local_executor": true,
+  "interface": {
+    "displayName": "Dream Trace",
+    "shortDescription": "可追溯、可纠正的 Codex 项目记忆",
+    "category": "Productivity"
+  }
+}

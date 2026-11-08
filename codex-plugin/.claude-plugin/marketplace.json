@@ -1,0 +1,10 @@
+{
+  "name": "dream-trace-local",
+  "interface": { "displayName": "Dream Trace Local" },
+  "plugins": [{
+    "name": "dream-trace",
+    "source": { "source": "local", "path": "./" },
+    "policy": { "installation": "AVAILABLE", "authentication": "ON_USE" },
+    "category": "Productivity"
+  }]
+}

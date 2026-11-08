@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "dream-trace": {
+      "command": "node",
+      "args": ["./dist/cli.mjs", "serve"],
+      "cwd": "./",
+      "env_vars": ["DREAM_TRACE_API_KEY", "DREAM_TRACE_CONFIG", "CODEX_HOME"],
+      "tool_timeout_sec": 240
+    }
+  }
+}
