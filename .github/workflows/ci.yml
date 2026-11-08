@@ -13,4 +13,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - name: Verify built output is committed and current
+        run: |
+          git diff --exit-code -- lib client.js
+          git ls-files --error-unmatch lib/index.js
       - run: node scripts/verify-package.mjs
