@@ -40,6 +40,7 @@ function failure(result: RemoteResult<unknown>, code: string) {
 function fact(id: string, status: MemoryFact['status'] = 'supported'): MemoryFact {
   const time = '2026-01-01T00:00:00.000Z'
   return { id, level: 4, title: `Test command ${id}`, content: 'Run npm test in this project.', category: 'procedure', status,
+    ...(id === 'first' ? { summary: 'Use the project test command.' } : {}),
     createdAt: time, updatedAt: time,
     sources: [{ sessionId: 'original-conversation', seq: 4, quote: 'Run npm test in this project.', kind: 'user', observedAt: time }],
     ...(status === 'stale' ? { retiredReason: 'Superseded by a later command.' } : {}),
@@ -113,6 +114,7 @@ test('official Client mount and Host gateway expose complete scoped snapshots an
     const snapshot = value(await ui.snapshot({ projectRoot: f.projectRoot }))
     assert.equal(snapshot.revision, 1)
     assert.equal(snapshot.memories.length, 3, 'snapshot must not be capped by model searchLimit')
+    assert.equal(snapshot.memories.find(row => row.id === 'first')?.summary, fact('first').summary)
     assert.equal(snapshot.facts, 2)
     assert.equal(snapshot.memories.find(row => row.id === 'retired')?.status, 'stale')
     assert.deepEqual(snapshot.revisions.map(row => row.revision), [1])
@@ -258,6 +260,7 @@ test('level changes through the UI and dsh tools share only the approved record 
     assert.equal(visible.length, 1)
     const shared = visible[0]
     assert.equal(shared.level, 1)
+    assert.equal(shared.summary, undefined, 'only the approved title and body are shared')
     assert.deepEqual(shared.sources, [])
     assert.doesNotMatch(JSON.stringify(visible), /original-conversation|Test command second/)
     assert.deepEqual(value(await ui.read({ ...other, id: shared.id })), shared)

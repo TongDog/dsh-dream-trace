@@ -16,6 +16,7 @@ export declare const updateSchema: z.ZodObject<{
     id: z.ZodOptional<z.ZodString>;
     title: z.ZodString;
     content: z.ZodString;
+    summary: z.ZodOptional<z.ZodString>;
     category: z.ZodEnum<{
         procedure: "procedure";
         decision: "decision";
@@ -40,6 +41,7 @@ export declare const proposalSchema: z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
         title: z.ZodString;
         content: z.ZodString;
+        summary: z.ZodOptional<z.ZodString>;
         category: z.ZodEnum<{
             procedure: "procedure";
             decision: "decision";
@@ -87,6 +89,7 @@ export declare const factSchema: z.ZodObject<{
     id: z.ZodString;
     title: z.ZodString;
     content: z.ZodString;
+    summary: z.ZodOptional<z.ZodString>;
     category: z.ZodEnum<{
         procedure: "procedure";
         decision: "decision";
@@ -120,6 +123,7 @@ export declare const visibleFactSchema: z.ZodUnion<readonly [z.ZodObject<{
     id: z.ZodString;
     title: z.ZodString;
     content: z.ZodString;
+    summary: z.ZodOptional<z.ZodString>;
     category: z.ZodEnum<{
         procedure: "procedure";
         decision: "decision";
@@ -151,6 +155,7 @@ export declare const visibleFactSchema: z.ZodUnion<readonly [z.ZodObject<{
     id: z.ZodString;
     title: z.ZodString;
     content: z.ZodString;
+    summary: z.ZodOptional<z.ZodString>;
     category: z.ZodEnum<{
         procedure: "procedure";
         decision: "decision";
@@ -187,6 +192,7 @@ export declare const stateSchema: z.ZodObject<{
         id: z.ZodString;
         title: z.ZodString;
         content: z.ZodString;
+        summary: z.ZodOptional<z.ZodString>;
         category: z.ZodEnum<{
             procedure: "procedure";
             decision: "decision";

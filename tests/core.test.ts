@@ -37,12 +37,15 @@ test('extracts cited memories, reviews them, persists restart-readable state, an
 test('corrections retain identity and rollback restores both facts and processing cursors', async () => {
   const f = await fixture()
   try {
-    await new DreamEngine(f.store, config, responses(proposal, { approved: true, reason: '' })).run([batch])
+    const first = { ...proposal, updates: [{ ...proposal.updates[0], summary: 'Eight tests passed.' }] }
+    await new DreamEngine(f.store, config, responses(first, { approved: true, reason: '' })).run([batch])
     const original = await f.store.read()
+    assert.equal(original.facts[0].summary, 'Eight tests passed.')
     const nextBatch: TranscriptBatch = { sessionId: 'session-a', throughSeq: 20, events: [{ sessionId: 'session-a', seq: 14, time: '2026-11-08T01:00:00Z', kind: 'tool', text: 'pnpm test completed: 9 tests passed.' }] }
     const correction: Proposal = { updates: [{ ...proposal.updates[0], id: original.facts[0].id, content: 'pnpm test passed 9 tests in the latest session.', evidence: [{ sessionId: 'session-a', seq: 14, quote: 'pnpm test completed: 9 tests passed.' }] }], retire: [] }
     const result = await new DreamEngine(f.store, config, responses(correction, { approved: true, reason: '' })).run([nextBatch])
     assert.equal(result.updated, 1)
+    assert.equal((await f.store.read()).facts[0].summary, undefined, 'a corrected body cannot retain an obsolete summary')
     assert.equal((await f.store.read()).facts[0].id, original.facts[0].id)
     assert.equal((await f.store.read()).cursors['session-a'], 20)
     const restored = await f.store.rollback(1)

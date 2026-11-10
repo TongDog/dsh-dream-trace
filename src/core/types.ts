@@ -14,10 +14,11 @@ export const citationSchema = z.object({ sessionId: id, seq: z.number().int().no
 export const levelSchema = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
 export type MemoryLevel = z.infer<typeof levelSchema>
 const projectLevel = z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
+const summary = z.string().trim().min(1).max(160).optional()
 const category = z.enum(['procedure', 'decision', 'preference', 'fact', 'pitfall'])
 export const updateSchema = z.object({
   id: id.optional(), title: z.string().trim().min(1).max(160), content: z.string().trim().min(1).max(12000),
-  category, level: projectLevel.optional(), status: z.enum(['supported', 'uncertain']), evidence: z.array(citationSchema).min(1).max(12),
+  summary, category, level: projectLevel.optional(), status: z.enum(['supported', 'uncertain']), evidence: z.array(citationSchema).min(1).max(12),
 }).strict()
 /** Only this data format can change memory; model output is never executable. */
 export const proposalSchema = z.object({
@@ -31,7 +32,7 @@ export type Citation = z.infer<typeof citationSchema>
 export const storedCitationSchema = citationSchema.extend({ observedAt: z.iso.datetime(), kind: z.enum(['user', 'assistant', 'tool']) })
 export type StoredCitation = z.infer<typeof storedCitationSchema>
 export const factSchema = z.object({
-  id, title: z.string().min(1).max(160), content: z.string().min(1).max(12000), category,
+  id, title: z.string().min(1).max(160), content: z.string().min(1).max(12000), summary, category,
   level: levelSchema.default(4), status: z.enum(['supported', 'uncertain', 'stale']), sources: z.array(storedCitationSchema).min(1).max(12),
   createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(), retiredReason: z.string().max(1000).optional(),
 }).strict()

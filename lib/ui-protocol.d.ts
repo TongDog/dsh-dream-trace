@@ -69,6 +69,7 @@ declare const snapshotResult: z.ZodObject<{
         id: z.ZodString;
         title: z.ZodString;
         content: z.ZodString;
+        summary: z.ZodOptional<z.ZodString>;
         category: z.ZodEnum<{
             procedure: "procedure";
             decision: "decision";
@@ -100,6 +101,7 @@ declare const snapshotResult: z.ZodObject<{
         id: z.ZodString;
         title: z.ZodString;
         content: z.ZodString;
+        summary: z.ZodOptional<z.ZodString>;
         category: z.ZodEnum<{
             procedure: "procedure";
             decision: "decision";
