@@ -1,17 +1,20 @@
-/** A tool-free OpenAI-compatible Chat Completions adapter. No Codex auth files are read. */
+/** Select an API or Codex CLI generator. Credentials remain owned by their provider. */
 import type { Generate } from '../core/types.ts'
 import type { CodexConfig } from './config.ts'
+import { createCodexGenerator } from './codex-model.ts'
 
 export function createGenerator(config: CodexConfig, request: typeof fetch = fetch): Generate {
+  if (config.model?.backend === 'codex') return createCodexGenerator(config, config.model)
   return async (system, payload, signal) => {
-    if (!config.model) throw new Error('Configure model in Dream Trace config.json before running consolidation')
-    const key = process.env[config.model.apiKeyEnv]
-    if (!key) throw new Error(`Set ${config.model.apiKeyEnv} in the MCP server environment before running consolidation`)
-    const response = await request(`${config.model.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
+    const model = config.model
+    if (!model || model.backend !== 'api') throw new Error('Configure model in Dream Trace config.json before running consolidation')
+    const key = process.env[model.apiKeyEnv]
+    if (!key) throw new Error(`Set ${model.apiKeyEnv} in the MCP server environment before running consolidation`)
+    const response = await request(`${model.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
       method: 'POST', redirect: 'error', signal,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: config.model.name, messages: [{ role: 'system', content: system }, { role: 'user', content: payload }],
-        response_format: { type: 'json_object' }, [config.model.tokenLimitField]: config.maxOutputTokens, stream: false }),
+      body: JSON.stringify({ model: model.name, messages: [{ role: 'system', content: system }, { role: 'user', content: payload }],
+        response_format: { type: 'json_object' }, [model.tokenLimitField]: config.maxOutputTokens, stream: false }),
     })
     // Provider error bodies may echo credentials or evidence; never surface them.
     if (!response.ok) { await response.body?.cancel(); throw new Error(`Dream Trace model request failed (HTTP ${response.status})`) }

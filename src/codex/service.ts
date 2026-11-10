@@ -38,6 +38,7 @@ export class CodexDreamService {
     return { projectRoot, revision: state.revision, facts: state.facts.filter(f => f.status !== 'stale').length,
       running: this.operations.has(projectRoot), lastRun: this.lastRuns.get(projectRoot) ?? null,
       revisions: await store.revisions(), autoRun: this.config.autoRun, modelConfigured: !!this.config.model,
+      modelBackend: this.config.model?.backend ?? null,
       capture: 'Codex hooks observed after installation; private historical transcripts are not imported.',
       cursors: state.cursors }
   }

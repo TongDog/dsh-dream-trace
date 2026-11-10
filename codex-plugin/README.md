@@ -25,17 +25,37 @@ codex plugin add dream-trace@dream-trace-local
 npm run pack:codex
 ```
 
-生成 `codex-plugin-dream-trace-0.1.0.tgz`。解压后，对包含 `.codex-plugin/plugin.json` 的 `package` 目录执行同样的 `codex plugin marketplace add /绝对路径/package` 和 `codex plugin add dream-trace@dream-trace-local`。包已包含运行代码及依赖，无需在解压目录执行 `npm install`。
+生成 `codex-plugin-dream-trace-0.2.0.tgz`。解压后，对包含 `.codex-plugin/plugin.json` 的 `package` 目录执行同样的 `codex plugin marketplace add /绝对路径/package` 和 `codex plugin add dream-trace@dream-trace-local`。包已包含运行代码及依赖，无需在解压目录执行 `npm install`。
 
 ### 启用项目和模型
 
 1. 复制包内 `config.example.json` 到 `~/.codex/dream-trace/config.json`。若设置了 `CODEX_HOME`，默认位置是 `$CODEX_HOME/dream-trace/config.json`。也可以用 `DREAM_TRACE_CONFIG` 指定一个绝对路径；hooks 与 MCP 必须使用同一份配置。
 2. 把 `projectRoots` 改为授权项目的绝对路径。默认空数组不采集任何项目。路径会规范化，不允许重复或父子目录重叠；worktree 需要作为独立根目录显式启用。
-3. 填写支持 Chat Completions JSON 模式的模型服务。`name` 是提供方的实际模型 ID；`baseUrl` 是包含 `/v1` 等前缀的基础地址，程序在其后追加 `/chat/completions`。
-4. 在启动 Codex 的环境中设置 `DREAM_TRACE_API_KEY`。不要把密钥写入配置或 Skill。桌面程序需要从具有该环境变量的环境启动；仅在另一个终端 `export` 不会修改已运行的桌面进程环境。
-5. 重启 Codex，按 Codex 的信任流程检查并启用插件 hooks（CLI 可用 `/hooks`），再新建项目聊天。安装插件本身不会自动信任 hooks。
+3. 选择下方的 Codex 后端或独立 API 后端。默认示例使用 Codex，先在本机运行 `codex login status` 确认已登录。
+4. 重启 Codex，按 Codex 的信任流程检查并启用插件 hooks（CLI 可用 `/hooks`），再新建项目聊天。安装或更新插件本身不会自动信任 hooks。
 
-配置示例（占位值必须替换）：
+#### 使用现有 Codex 登录
+
+```json
+{
+  "projectRoots": ["/absolute/path/to/project"],
+  "autoRun": false,
+  "verify": true,
+  "model": { "backend": "codex" }
+}
+```
+
+无需单独设置 API Key。插件通过 `codex exec` 使用 Codex 保存的登录，由 Codex 自己管理认证；插件不读取或复制登录文件。调用会使用该登录对应的额度，ChatGPT 登录仍受 Codex 使用限额约束。
+
+可选 `model.name` 指定可用模型，省略时使用 CLI 的内置默认模型；`model.reasoningEffort` 指定推理强度。`model.command` 默认为 `codex`，桌面进程的 PATH 找不到命令时设为可执行文件的绝对路径。工作进程启用 Codex 的系统代理支持，沿用本机既有网络代理，不改全局配置。需要支持 `--ignore-user-config`、`--ephemeral` 和 `--output-schema` 的 Codex CLI；本机验证版本为 `0.164.0-alpha.11.1`。
+
+每次调用在独立临时目录中运行，使用只读沙箱、不持久化聊天、不加载用户配置和项目指令，关闭 hooks、插件、应用、浏览器和执行工具。证据通过标准输入传递；原始提示、错误正文和推理不会写入插件日志。若事件流出现工具或未知操作，立即取消并拒绝结果。`DREAM_TRACE_CODEX_WORKER` 额外阻止递归采集和复盘。运行结束清除临时输入和输出；超时或取消会终止工作进程组。操作系统或机器异常退出不在正常清理保证内。
+
+总结与复核分别调用一次 Codex。两次都成功且引用校验通过后才发布记忆版本，失败不会推进处理游标。独立 API 的 `maxOutputTokens` 不控制 Codex CLI；Codex 仍受整个复盘超时、输入/提案字符预算和 2 MiB 输出传输上限约束。
+
+#### 使用独立 API
+
+原有未指定 `backend` 的配置继续按 API 模式解释。也可显式设置：
 
 ```json
 {
@@ -43,6 +63,7 @@ npm run pack:codex
   "autoRun": false,
   "verify": true,
   "model": {
+    "backend": "api",
     "baseUrl": "https://api.openai.com/v1",
     "name": "YOUR_MODEL_ID",
     "apiKeyEnv": "DREAM_TRACE_API_KEY",
@@ -51,11 +72,11 @@ npm run pack:codex
 }
 ```
 
-兼容服务若使用 `max_tokens`，修改 `tokenLimitField`。HTTP 只允许本机回环地址；远程服务要求 HTTPS。模型调用使用独立 API 凭据，不读取 Codex 登录文件，也不自动使用 ChatGPT 订阅额度。
+服务须支持 Chat Completions JSON 模式。`name` 是实际模型 ID；`baseUrl` 包含 `/v1` 等前缀，插件在其后追加 `/chat/completions`。兼容服务若使用 `max_tokens`，修改 `tokenLimitField`。HTTP 只允许本机回环地址；远程服务要求 HTTPS。
 
-只检索已有记忆时可以省略 `model`。启用复盘会把所选脱敏观察和旧记忆发送给配置的模型服务；复核默认开启，通常会再调用一次模型。只推进空证据游标或没有新增已停止片段时不调用模型。
+在启动 Codex 的环境中设置 `DREAM_TRACE_API_KEY`，不要把密钥写入配置或 Skill。桌面程序须从具有该环境变量的环境启动；另一个终端的 `export` 不会修改已运行的进程。默认 MCP 配置转发 `DREAM_TRACE_API_KEY`、`DREAM_TRACE_CONFIG` 和 `CODEX_HOME`；其他 `apiKeyEnv` 需加入 MCP 的 `env_vars`。API 模式使用独立 API 额度。
 
-默认 MCP 配置转发 `DREAM_TRACE_API_KEY`、`DREAM_TRACE_CONFIG` 和 `CODEX_HOME`。若使用其他 `apiKeyEnv`，需要把该变量也加入 MCP 的 `env_vars`，并确保启动环境中存在它。
+只检索已有记忆时可以省略 `model`。两种后端都会把所选脱敏观察和旧记忆交给模型服务；复核默认开启。只推进空证据游标或没有新增已停止片段时不调用模型。`dream_status.modelBackend` 可确认实际选择的后端。
 
 ## 使用
 
@@ -117,7 +138,7 @@ hooks 只做本地采集和加载，不在用户工具执行路径中调用模�
 | `maxInputChars` / `maxProposalChars` | 60000 / 12000 | 模型数据与提案字符预算 |
 | `maxFacts` / `maxFactChars` / `maxFactsPerRun` | 100 / 1800 / 20 | 当前记忆及单批变更上限 |
 | `maxIndexChars` / `searchLimit` | 4000 / 20 | 索引及检索预算 |
-| `maxOutputTokens` / `runTimeoutSeconds` | 6000 / 180 | 每次模型输出与整个复盘超时 |
+| `maxOutputTokens` / `runTimeoutSeconds` | 6000 / 180 | API 每次输出 token 预算与整个复盘超时 |
 
 提高 `runTimeoutSeconds` 时也要调整 MCP `tool_timeout_sec`（包内默认 240 秒）。所有模型调用合计受整个复盘超时约束。预算是字符数或条数时不等同于计费 token。
 
@@ -144,6 +165,13 @@ node scripts/verify-codex-package.mjs
 
 包验证使用临时项目、临时 Codex 配置、真实 MCP SDK stdio 客户端和本机脚本化模型响应，不发送个人历史、不消耗线上模型额度。另通过真实 Codex App Server 检查安装后的 5 个 hooks 和 7 个 MCP 工具。源码测试验证取消、复核拒绝、项目隔离和并发等边界；脚本化响应不证明线上模型的记忆质量。
 
+可选的真实 Codex 登录验证仅使用独立临时项目中的合成证据，会消耗 Codex 额度；不读写个人项目记忆：
+
+```sh
+node --import tsx scripts/verify-codex-login.mjs
+# 或在末尾指定当前账户可用的模型 ID
+```
+
 当前分发使用 `.codex-plugin/plugin.json` 兼容清单和 `.mcp.json`；MCP 的 `cwd: "./"` 由 Codex 相对插件根目录解析，入口参数使用 `./dist/cli.mjs`。该布局已在本机 Codex `0.164.0-alpha.11.1` 验证。请勿直接换成 `${CLAUDE_PLUGIN_ROOT}` 参数或添加根 `plugin.json`：本机版本对这些组合的处理不同，曾出现安装成功但 hooks 未加载或 MCP 握手失败。更换清单格式应重新执行包验证。
 
-官方参考：[插件打包](https://developers.openai.com/plugins/build/plugins)、[Codex hooks](https://learn.chatgpt.com/docs/hooks)、[MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)。当前带 hooks 的插件面向本地手动安装，不符合公共插件目录的 hooks 发布限制。
+官方参考：[Codex 非交互调用及认证](https://learn.chatgpt.com/docs/non-interactive-mode)、[插件打包](https://developers.openai.com/plugins/build/plugins)、[Codex hooks](https://learn.chatgpt.com/docs/hooks)、[MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)。当前带 hooks 的插件面向本地手动安装，不符合公共插件目录的 hooks 发布限制。

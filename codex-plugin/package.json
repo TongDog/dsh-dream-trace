@@ -1,6 +1,6 @@
 {
   "name": "codex-plugin-dream-trace",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Evidence-linked project memory for Codex, powered by Dreaming",
   "type": "module",
   "license": "MIT",

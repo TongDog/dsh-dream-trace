@@ -4,9 +4,6 @@
   "autoRunIntervalSeconds": 30,
   "verify": true,
   "model": {
-    "baseUrl": "https://api.openai.com/v1",
-    "name": "REPLACE_WITH_YOUR_MODEL_ID",
-    "apiKeyEnv": "DREAM_TRACE_API_KEY",
-    "tokenLimitField": "max_completion_tokens"
+    "backend": "codex"
   }
 }

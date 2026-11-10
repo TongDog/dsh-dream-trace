@@ -8,6 +8,11 @@ import { redactSecrets } from '../core/security.ts'
 
 async function main() {
   const [command = 'serve', ...args] = process.argv.slice(2)
+  // Defense in depth if a worker's host attempts to load a hook or this MCP server.
+  if (process.env.DREAM_TRACE_CODEX_WORKER === '1') {
+    if (command === 'hook') { console.log('{}'); return }
+    if (command === 'serve' || command === 'run') throw new Error('Dream Trace cannot run recursively inside a Codex memory worker')
+  }
   if (command === '--help' || command === 'help') {
     console.log('Dream Trace for Codex\n\n  serve                 Start the stdio MCP server\n  hook                  Capture one Codex hook JSON object from stdin\n  status [projectRoot]  Inspect memory\n  run [projectRoot]     Consolidate captured evidence\n\nConfig: DREAM_TRACE_CONFIG or $CODEX_HOME/dream-trace/config.json (~/.codex by default).')
     return

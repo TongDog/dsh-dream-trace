@@ -10,7 +10,8 @@ export const codexConfigSchema = z.object({
   storageDirectory: absolute.optional(),
   autoRun: z.boolean().default(false),
   autoRunIntervalSeconds: z.number().int().min(10).max(86400).default(30),
-  model: z.object({
+  model: z.union([z.object({
+    backend: z.literal('api').default('api'),
     baseUrl: z.url().refine(value => {
       const url = new URL(value)
       return !url.username && !url.password && !url.search && !url.hash &&
@@ -19,7 +20,12 @@ export const codexConfigSchema = z.object({
     name: z.string().min(1),
     apiKeyEnv: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/).default('DREAM_TRACE_API_KEY'),
     tokenLimitField: z.enum(['max_completion_tokens', 'max_tokens']).default('max_completion_tokens'),
-  }).strict().optional(),
+  }).strict(), z.object({
+    backend: z.literal('codex'),
+    command: z.string().min(1).refine(value => value === 'codex' || isAbsolute(value), 'Use codex or an absolute executable path').default('codex'),
+    name: z.string().min(1).optional(),
+    reasoningEffort: z.enum(['minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra']).optional(),
+  }).strict()]).optional(),
   verify: z.boolean().default(true),
   maxSessionsPerRun: z.number().int().min(1).max(1000).default(10),
   maxEventsPerRun: z.number().int().min(1).max(100000).default(2000),
