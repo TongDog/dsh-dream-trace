@@ -16,7 +16,7 @@ Build and install a tarball from this repository:
 npm ci
 npm run check
 npm pack
-dsh plugin --profile web add /absolute/path/dsh-plugin-dreaming-0.3.0.tgz
+dsh plugin --profile web add /absolute/path/dsh-plugin-dreaming-0.3.1.tgz
 ```
 
 The bundle starts with an empty allowlist. Create a workspace overlay `dreaming.patch.yml`:
@@ -47,6 +47,7 @@ Open **Memory** in the dsh Web sidebar, then select an enabled project. The page
 - The four counters show active memories, supported memories, uncertain memories (**Needs review**), and the current revision. Active includes supported and uncertain records, excluding retired ones.
 - Search titles, contents, and source quotations. Filter by procedure, decision, preference, fact, or pitfall, and by active, supported, uncertain, or retired status. The default view excludes retired records; select **Retired** or **All statuses** to inspect them.
 - Select a record to read its full content, creation/update times, evidence quotations, source kind, observation time, session ID, and event sequence. These identifiers locate the original evidence; the page does not open the original conversation automatically.
+- Toggle **Allow agent recall** in the detail pane. Paused records remain available under **Paused only**. Pausing a shared record at its source affects all receiving projects. A receiving project can also pause its own copy.
 - Use **Run Dreaming** after completing work in the selected project. The page shows the operation result and reloads the current revision. **Refresh** fetches a fresh snapshot, including changes made through tools or background runs.
 - **Remove memory** asks for confirmation before removing a current record. **Version history → Restore** asks for confirmation and restores the selected facts and processing cursors as a new revision. Both actions retain older revisions and source conversations.
 

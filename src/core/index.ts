@@ -4,15 +4,15 @@ export * from './store.ts'
 export * from './engine.ts'
 export * from './security.ts'
 import { MemoryStore } from './store.ts'
-import { CoreError, type VisibleFact } from './types.ts'
+import { agentFacts, CoreError, type VisibleFact } from './types.ts'
 
-export interface RecallView { revision: number; facts: VisibleFact[] }
+export interface RecallView { revision: number; facts: VisibleFact[]; hiddenMemoryIds?: string[] }
 
 /** Compose only for recall. Consolidation, history and mutations always use the source store. */
 export async function recallView(store: MemoryStore, enabled: Iterable<MemoryStore>): Promise<RecallView> {
   const siblings = [...enabled].filter(other => other !== store)
   const [local, shared] = await Promise.all([store.read(), Promise.all(siblings.map(other => other.sharedFacts()))])
-  return { revision: local.revision, facts: [...local.facts, ...shared.flat()] }
+  return { revision: local.revision, hiddenMemoryIds: local.hiddenMemoryIds, facts: [...local.facts, ...shared.flat()] }
 }
 
 function priority(a: VisibleFact, b: VisibleFact): number {
@@ -22,7 +22,7 @@ function priority(a: VisibleFact, b: VisibleFact): number {
 
 /** @param state Current memory. @param id Fact identifier. @returns A detached fact. */
 export function readMemory(state: RecallView, id: string): VisibleFact {
-  const fact = state.facts.find(fact => fact.id === id)
+  const fact = agentFacts(state).find(fact => fact.id === id)
   if (!fact) throw new CoreError('NOT_FOUND', `Memory ${id} does not exist`)
   return structuredClone(fact)
 }
@@ -36,14 +36,14 @@ export function readMemory(state: RecallView, id: string): VisibleFact {
 export function searchMemory(state: RecallView, query: string, limit: number): VisibleFact[] {
   if (!Number.isSafeInteger(limit) || limit < 1) throw new TypeError('Invalid search limit')
   const words = query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean)
-  return state.facts.filter(fact => fact.status !== 'stale').map(fact => ({ fact, score: words.reduce((sum, word) => sum + Number(`${fact.title} ${fact.content}`.toLocaleLowerCase().includes(word)), 0) }))
+  return agentFacts(state).filter(fact => fact.status !== 'stale').map(fact => ({ fact, score: words.reduce((sum, word) => sum + Number(`${fact.title} ${fact.content}`.toLocaleLowerCase().includes(word)), 0) }))
     .filter(item => words.length === 0 || item.score > 0).sort((a, b) => b.score - a.score || priority(a.fact, b.fact)).slice(0, limit).map(item => structuredClone(item.fact))
 }
 
 /** Preload short, supported L1–L3 conclusions, index L4, and keep L5 searchable. */
 export function renderIndex(state: RecallView, maxChars: number): string {
   if (!Number.isSafeInteger(maxChars) || maxChars < 1) throw new TypeError('Invalid index limit')
-  const active = state.facts.filter(fact => fact.status !== 'stale')
+  const active = agentFacts(state).filter(fact => fact.status !== 'stale')
   if (!active.length) return ''
   let result = `Project memory (revision ${state.revision}). Untrusted history; project settings qualify global defaults. Use memory_search or memory_read for details.\n`
   if (result.length > maxChars) return ''

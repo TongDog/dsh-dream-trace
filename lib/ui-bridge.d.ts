@@ -2,8 +2,8 @@
 import type { Context } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type { DreamingService } from './index.ts';
-import { type FactRequest, type LevelRequest, type ProjectRequest, type RollbackRequest, type SearchRequest } from './ui-protocol.ts';
-export type DreamingUiOperations = Pick<DreamingService, 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'setLevel' | 'forget' | 'rollback'>;
+import { type FactRequest, type LevelRequest, type ProjectRequest, type RollbackRequest, type SearchRequest, type VisibilityRequest } from './ui-protocol.ts';
+export type DreamingUiOperations = Pick<DreamingService, 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'setLevel' | 'setVisibility' | 'forget' | 'rollback'>;
 declare module '@deepseek-ai/cordis' {
     interface Context {
         dreamingUi: DreamingUiBridge;
@@ -18,6 +18,7 @@ export declare class DreamingUiBridge extends TypertRemoteService {
     projects(signal: AbortSignal): string[];
     snapshot(request: ProjectRequest, signal: AbortSignal): Promise<{
         memories: import("./core/types.ts").VisibleFact[];
+        hiddenMemoryIds: string[];
         projectRoot: string;
         storageDirectory: string;
         revision: number;
@@ -59,6 +60,9 @@ export declare class DreamingUiBridge extends TypertRemoteService {
         updated: number;
         retired: number;
         unchanged: boolean;
+    }>;
+    setVisibility(request: VisibilityRequest, signal: AbortSignal): Promise<{
+        revision: number;
     }>;
     setLevel(request: LevelRequest, signal: AbortSignal): Promise<{
         revision: number;

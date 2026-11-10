@@ -5,7 +5,7 @@ import { mkdir, open, readFile, realpath, rename, stat, unlink } from 'node:fs/p
 import { dirname, join } from 'node:path'
 import lockfile from 'proper-lockfile'
 import { z } from 'zod'
-import { CoreError, levelSchema, stateSchema, type MemoryLevel, type MemoryState, type VisibleFact } from './types.ts'
+import { agentFacts, CoreError, levelSchema, stateSchema, type MemoryLevel, type MemoryState, type VisibleFact } from './types.ts'
 
 const pointerSchema = z.object({ revision: z.number().int().positive(), hash: z.string().regex(/^[a-f0-9]{64}$/) }).strict()
 function missing(error: unknown): boolean { return error instanceof Error && 'code' in error && error.code === 'ENOENT' }
@@ -60,7 +60,7 @@ export class MemoryStore {
     if (this.sharedCache?.hash !== pointer.hash) {
       const state = await this.loadRevision(pointer.revision, pointer.hash)
       const facts: VisibleFact[] = []
-      for (const fact of state.facts) {
+      for (const fact of agentFacts(state)) {
         if (fact.level !== 1 || fact.status !== 'supported') continue
         const id = 'shared:' + digest(JSON.stringify([this.projectId, fact.id]))
         facts.push({ id, title: fact.title, content: fact.content, category: fact.category,
@@ -210,7 +210,8 @@ export class MemoryStore {
       let target = current
       while (target.revision !== revision && target.parentRevision !== null && target.parentHash !== null) target = await this.loadRevision(target.parentRevision, target.parentHash)
       if (target.revision !== revision || revision < 1) throw new CoreError('NOT_FOUND', `Committed revision ${revision} does not exist`)
-      return target
+      // Rolling back learned content must not undo a user’s current visibility choices.
+      return { ...target, hiddenMemoryIds: current.hiddenMemoryIds }
     }, signal)
   }
 

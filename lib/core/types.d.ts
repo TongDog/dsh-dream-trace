@@ -169,6 +169,13 @@ export declare const visibleFactSchema: z.ZodUnion<readonly [z.ZodObject<{
 export type VisibleFact = MemoryFact & {
     inherited?: true;
 };
+/** Visibility is an owner preference. Missing preferences in older revisions mean visible. */
+export declare function agentFacts<T extends {
+    id: string;
+}>(state: {
+    facts: T[];
+    hiddenMemoryIds?: string[];
+}): T[];
 export declare const stateSchema: z.ZodObject<{
     schemaVersion: z.ZodLiteral<1>;
     projectId: z.ZodString;
@@ -209,6 +216,7 @@ export declare const stateSchema: z.ZodObject<{
         retiredReason: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>>;
     cursors: z.ZodPipe<z.ZodUnknown, z.ZodTransform<Record<string, number>, unknown>>;
+    hiddenMemoryIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
 }, z.core.$strict>;
 export type MemoryState = z.infer<typeof stateSchema>;
 /** An observable event; private model reasoning must never be supplied. */

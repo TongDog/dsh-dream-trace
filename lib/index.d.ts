@@ -101,6 +101,7 @@ export declare class DreamingService extends Service {
     /** A consistent current revision and its bounded notes, including retired notes. */
     snapshot(projectRoot: string): Promise<{
         memories: import("./core/types.ts").VisibleFact[];
+        hiddenMemoryIds: string[];
         projectRoot: string;
         storageDirectory: string;
         revision: number;
@@ -129,6 +130,10 @@ export declare class DreamingService extends Service {
         revision: number;
     }>;
     private view;
+    /** Owner-only Web operation. An inherited ID can be paused in the receiving project. */
+    setVisibility(projectRoot: string, id: string, visible: boolean, expectedRevision: number, signal?: AbortSignal): Promise<{
+        revision: number;
+    }>;
     setLevel(projectRoot: string, id: string, level: MemoryLevel, expectedRevision?: number, signal?: AbortSignal): Promise<{
         revision: number;
     }>;

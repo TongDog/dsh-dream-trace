@@ -433,3 +433,34 @@ test('legacy revision bytes remain verifiable through promotion and rollback', a
     assert.equal(await readFile(path, 'utf8'), bytes)
   } finally { await f.cleanup() }
 })
+
+test('paused observations stay out of recall and model review, and duplicate proposals preserve the pause', async () => {
+  const f = await fixture()
+  try {
+    await new DreamEngine(f.store, config, responses(proposal, { approved: true, reason: '' })).run([batch])
+    const state = await f.store.transact(async current => ({ ...current, hiddenMemoryIds: [current.facts[0].id] }))
+    const paused = state.facts[0]
+    assert.equal(renderIndex(state, 4000), '')
+    assert.deepEqual(searchMemory(state, '', 4), [])
+    assert.throws(() => readMemory(state, paused.id), code('NOT_FOUND'))
+    const next = { sessionId: 'next', seq: 1, time: batch.events[0].time, kind: 'user' as const, text: 'Use JSON output.' }
+    const evidence = [{ sessionId: next.sessionId, seq: next.seq, quote: next.text }]
+    let calls = 0
+    const engine = new DreamEngine(f.store, config, async (_system, payload) => {
+      assert.ok(!payload.includes(paused.content) && !payload.includes(citation.quote))
+      if (++calls === 2) {
+        assert.ok(!payload.includes(paused.title))
+        return JSON.stringify({ approved: true, reason: '' })
+      }
+      return JSON.stringify({ updates: [
+        { ...proposal.updates[0], content: 'Duplicate suggestion', evidence },
+        { ...proposal.updates[0], title: 'Output format', content: next.text, evidence },
+      ] })
+    })
+    await engine.run([{ sessionId: next.sessionId, throughSeq: 1, events: [next] }])
+    const result = await f.store.read()
+    assert.equal(calls, 2)
+    assert.deepEqual(result.facts.find(fact => fact.id === paused.id), paused)
+    assert.deepEqual(searchMemory(result, '', 4).map(fact => fact.title), ['Output format'])
+  } finally { await f.cleanup() }
+})

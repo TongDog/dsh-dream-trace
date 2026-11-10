@@ -8,6 +8,7 @@ import { type VisibleFact } from './types.ts';
 export interface RecallView {
     revision: number;
     facts: VisibleFact[];
+    hiddenMemoryIds?: string[];
 }
 /** Compose only for recall. Consolidation, history and mutations always use the source store. */
 export declare function recallView(store: MemoryStore, enabled: Iterable<MemoryStore>): Promise<RecallView>;

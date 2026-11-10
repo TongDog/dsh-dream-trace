@@ -14,6 +14,12 @@ export declare const factRequest: z.ZodObject<{
     projectRoot: z.ZodString;
     id: z.ZodString;
 }, z.core.$strict>;
+export declare const visibilityRequest: z.ZodObject<{
+    projectRoot: z.ZodString;
+    id: z.ZodString;
+    visible: z.ZodBoolean;
+    expectedRevision: z.ZodNumber;
+}, z.core.$strict>;
 export declare const levelRequest: z.ZodObject<{
     projectRoot: z.ZodString;
     id: z.ZodString;
@@ -109,6 +115,7 @@ declare const snapshotResult: z.ZodObject<{
         inherited: z.ZodLiteral<true>;
         sources: z.ZodTuple<[], null>;
     }, z.core.$strict>]>>;
+    hiddenMemoryIds: z.ZodDefault<z.ZodArray<z.ZodString>>;
 }, z.core.$strict>;
 declare const runResult: z.ZodObject<{
     revision: z.ZodNumber;
@@ -124,6 +131,7 @@ declare const runResult: z.ZodObject<{
 export type ProjectRequest = z.infer<typeof projectRequest>;
 export type SearchRequest = z.infer<typeof searchRequest>;
 export type FactRequest = z.infer<typeof factRequest>;
+export type VisibilityRequest = z.infer<typeof visibilityRequest>;
 export type LevelRequest = z.infer<typeof levelRequest>;
 export type RollbackRequest = z.infer<typeof rollbackRequest>;
 export type MemorySnapshot = z.infer<typeof snapshotResult>;
@@ -136,6 +144,9 @@ export interface DreamingUiRemote {
     search(request: SearchRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>[]>>;
     read(request: FactRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>>>;
     run(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<DreamingRunResult>>;
+    setVisibility(request: VisibilityRequest, signal?: AbortSignal): Promise<RemoteResult<{
+        revision: number;
+    }>>;
     setLevel(request: LevelRequest, signal?: AbortSignal): Promise<RemoteResult<{
         revision: number;
     }>>;
