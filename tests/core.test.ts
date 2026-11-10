@@ -1,4 +1,5 @@
 import { test } from 'node:test'
+import { createHash } from 'node:crypto'
 import assert from 'node:assert/strict'
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -354,5 +355,81 @@ test('losing writer cleanup does not remove a replacement lock owned by another 
     }).run([batch]), code('BUSY'))
     assert.equal(await readFile(join(path, 'owner'), 'utf8'), 'successor')
     assert.equal((await f.store.read()).revision, 0)
+  } finally { await f.cleanup() }
+})
+
+test('preloads supported settings and critical rules, indexes routine notes, and retrieves reference details on demand', async () => {
+  const f = await fixture()
+  try {
+    const updates = ([2, 3, 4, 5] as const).map(level => ({
+      ...proposal.updates[0], level, title: `Topic ${level}`, content: `Conclusion for level ${level}.`,
+    }))
+    await new DreamEngine(f.store, config, responses({ updates: updates.reverse() }, { approved: true, reason: '' })).run([batch])
+    const state = await f.store.read()
+    const index = renderIndex(state, 4000)
+    assert.ok(index.indexOf('Topic 2') < index.indexOf('Topic 3'))
+    assert.match(index, /Conclusion for level 2/)
+    assert.match(index, /Conclusion for level 3/)
+    assert.match(index, /Topic 4/)
+    assert.doesNotMatch(index, /Conclusion for level 4|Topic 5|Conclusion for level 5/)
+    assert.deepEqual(searchMemory(state, 'topic', 5).map(fact => fact.level), [2, 3, 4, 5])
+    const setting = state.facts.find(fact => fact.level === 2)!
+    const global = { ...setting, id: 'global', level: 1 as const, content: 'Conflicting global default.' }
+    const withDefault = { ...state, facts: [...state.facts, global] }
+    assert.doesNotMatch(renderIndex(withDefault, 4000), /Conflicting global default/)
+    assert.equal(searchMemory(withDefault, 'Conflicting', 5)[0].id, 'global')
+    setting.status = 'uncertain'
+    assert.doesNotMatch(renderIndex(state, 4000), /Conclusion for level 2/)
+    setting.status = 'supported'
+    setting.content = 'A'.repeat(350)
+    assert.ok(renderIndex(state, 300).length <= 300)
+    assert.match(renderIndex(state, 300), /Topic 2/)
+    assert.doesNotMatch(renderIndex(state, 300), /AAAA/)
+  } finally { await f.cleanup() }
+})
+
+test('L1 requires explicit sharing and a changed conclusion returns to project scope', async () => {
+  const f = await fixture()
+  try {
+    const update = proposal.updates[0]
+    const run = (changes: unknown, input: TranscriptBatch) =>
+      new DreamEngine(f.store, config, responses({ updates: [changes] }, { approved: true, reason: '' })).run([input])
+    await assert.rejects(run({ ...update, level: 1 }, batch), code('INVALID_PROPOSAL'))
+    await run({ ...update, level: 3 }, batch)
+    const id = (await f.store.read()).facts[0].id
+    await assert.rejects(f.store.setLevel(id, 1, undefined), /revision/)
+    await assert.rejects(f.store.setLevel(id, 1, 0), /refresh/)
+    await f.store.setLevel(id, 1, 1)
+    assert.equal((await f.store.sharedFacts()).length, 1)
+    const next = { ...batch, sessionId: 'next', throughSeq: 20, events: batch.events.map(e => ({ ...e, sessionId: 'next' })) }
+    await run({ ...update, id, content: 'A new project-specific conclusion.', level: 2,
+      evidence: [{ ...citation, sessionId: 'next' }] }, next)
+    assert.equal((await f.store.read()).facts[0].level, 2)
+    assert.deepEqual(await f.store.sharedFacts(), [])
+    await f.store.rollback(2)
+    assert.equal((await f.store.sharedFacts())[0].content, update.content)
+    await f.store.forget(id)
+    assert.deepEqual(await f.store.sharedFacts(), [])
+  } finally { await f.cleanup() }
+})
+
+test('legacy revision bytes remain verifiable through promotion and rollback', async () => {
+  const f = await fixture()
+  try {
+    const store = f.store
+    const time = batch.events[0].time
+    const legacy = { ...await store.read(), revision: 1, createdAt: time, facts: [{
+      id: 'legacy', title: 'Old record', content: 'A qualified observation.', category: 'fact', status: 'uncertain',
+      sources: [{ ...citation, observedAt: time, kind: 'tool' }], createdAt: time, updatedAt: time,
+    }] }
+    const bytes = JSON.stringify(legacy)
+    const path = join(f.directory, 'revision-1.json')
+    await writeFile(path, bytes)
+    await writeFile(join(f.directory, 'current.json'), JSON.stringify({ revision: 1, hash: createHash('sha256').update(bytes).digest('hex') }))
+    assert.equal((await store.read()).facts[0].level, 4)
+    await assert.rejects(store.setLevel('legacy', 1, 1), /supported/)
+    assert.equal((await store.setLevel('legacy', 2, 1)).revision, 2)
+    assert.deepEqual((await store.rollback(1)).facts[0], { ...legacy.facts[0], level: 4 })
+    assert.equal(await readFile(path, 'utf8'), bytes)
   } finally { await f.cleanup() }
 })

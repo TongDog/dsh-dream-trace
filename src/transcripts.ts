@@ -39,7 +39,7 @@ export class TranscriptError extends Error {
   }
 }
 
-const ownTools = new Set(['dream_run', 'dream_status', 'dream_rollback', 'memory_search', 'memory_read', 'memory_forget'])
+const ownTools = new Set(['dream_run', 'dream_status', 'dream_rollback', 'memory_search', 'memory_read', 'memory_set_level', 'memory_forget'])
 
 function textBlocks(blocks: readonly ContentBlock[]): string {
   return blocks.flatMap(block => block.type === 'text' ? [block.text] : []).join('\n')

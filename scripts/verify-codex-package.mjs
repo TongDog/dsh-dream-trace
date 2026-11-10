@@ -68,7 +68,7 @@ try {
   transport = new StdioClientTransport({ command: process.execPath, args: [entry, 'serve'], cwd: temporary, env, stderr: 'pipe' })
   client = new Client({ name: 'package-verifier', version: '1.0.0' })
   await client.connect(transport)
-  assert.equal((await client.listTools()).tools.length, 7)
+  assert.equal((await client.listTools()).tools.length, 8)
   const call = async (name, args = {}) => {
     const result = await client.callTool({ name, arguments: args })
     assert.notEqual(result.isError, true, JSON.stringify(result))
@@ -123,8 +123,8 @@ try {
   const loaded = inventory.data.find(server => server.name === 'dream-trace')
   assert.ok(loaded, 'Codex must load the bundled MCP server')
   assert.equal(loaded.toolsError, null)
-  assert.equal(Object.keys(loaded.tools).length, 7)
-  console.log(`Verified ${files.length} packaged files, real stdio MCP, hook capture and recall, two scripted model calls, idempotence, scope, forget/rollback, official installation, and Codex discovery of 5 hooks / 7 tools.`)
+  assert.equal(Object.keys(loaded.tools).length, 8)
+  console.log(`Verified ${files.length} packaged files, real stdio MCP, hook capture and recall, two scripted model calls, idempotence, scope, forget/rollback, official installation, and Codex discovery of 5 hooks / 8 tools.`)
 } finally {
   if (appServer && appServer.exitCode === null) {
     const exited = new Promise(resolve => appServer.once('exit', resolve))

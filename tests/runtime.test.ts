@@ -18,7 +18,7 @@ import Dreaming, { type ConfigInput } from '../src/index.ts'
 const instruction = 'For this project, run npm run test:unit to execute unit tests.'
 const memoryTitle = 'Project unit test command'
 const memoryContent = 'The project user specifies npm run test:unit as the unit test command.'
-const pluginTools = ['dream_run', 'dream_status', 'dream_rollback', 'memory_search', 'memory_read', 'memory_forget']
+const pluginTools = ['dream_run', 'dream_status', 'dream_rollback', 'memory_search', 'memory_read', 'memory_set_level', 'memory_forget']
 const payloadSchema = z.object({
   events: z.array(z.object({ sessionId: z.string(), seq: z.number(), kind: z.string(), text: z.string() })),
   proposal: z.unknown().optional(),

@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { CoreError, DreamEngine, MemoryStore, evidenceBudget, readMemory, renderIndex, searchMemory, type Generate, type EngineConfig } from '../core/index.ts'
+import { CoreError, DreamEngine, MemoryStore, evidenceBudget, readMemory, recallView, renderIndex, searchMemory, type Generate, type MemoryLevel, type EngineConfig } from '../core/index.ts'
 import { type CodexConfig } from './config.ts'
 import { hash } from './files.ts'
 import { createGenerator } from './model.ts'
@@ -31,6 +31,14 @@ export class CodexDreamService {
   }
   private store(root?: string) { return this.stores.get(this.project(root))! }
 
+  private view(root?: string) { return recallView(this.store(root), this.stores.values()) }
+
+  async setLevel(root: string | undefined, id: string, level: MemoryLevel, expectedRevision?: number, signal?: AbortSignal) {
+    return this.exclusive(this.project(root), signal, async control => ({
+      revision: (await this.store(root).setLevel(id, level, expectedRevision, control)).revision,
+    }))
+  }
+
   async status(root?: string) {
     const projectRoot = this.project(root)
     const store = this.store(projectRoot)
@@ -45,10 +53,10 @@ export class CodexDreamService {
 
   async search(root: string | undefined, query: string, limit = this.config.searchLimit) {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > this.config.searchLimit) throw new Error(`limit must be between 1 and ${this.config.searchLimit}`)
-    return searchMemory(await this.store(root).read(), query, limit)
+    return searchMemory(await this.view(root), query, limit)
   }
-  async read(root: string | undefined, id: string) { return readMemory(await this.store(root).read(), id) }
-  async index(root?: string) { return renderIndex(await this.store(root).read(), this.config.maxIndexChars) }
+  async read(root: string | undefined, id: string) { return readMemory(await this.view(root), id) }
+  async index(root?: string) { return renderIndex(await this.view(root), this.config.maxIndexChars) }
 
   async run(root?: string, signal?: AbortSignal) {
     const projectRoot = this.project(root)

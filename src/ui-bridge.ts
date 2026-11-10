@@ -6,11 +6,11 @@ import { z } from 'zod'
 import { CoreError } from './core/types.ts'
 import type { DreamingService } from './index.ts'
 import {
-  dreamingRemoteContribution, factRequest, projectRequest, rollbackRequest, searchRequest,
-  type FactRequest, type ProjectRequest, type RollbackRequest, type SearchRequest,
+  dreamingRemoteContribution, factRequest, levelRequest, projectRequest, rollbackRequest, searchRequest,
+  type FactRequest, type LevelRequest, type ProjectRequest, type RollbackRequest, type SearchRequest,
 } from './ui-protocol.ts'
 
-export type DreamingUiOperations = Pick<DreamingService, 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'forget' | 'rollback'>
+export type DreamingUiOperations = Pick<DreamingService, 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'setLevel' | 'forget' | 'rollback'>
 
 declare module '@deepseek-ai/cordis' {
   interface Context { dreamingUi: DreamingUiBridge }
@@ -54,6 +54,10 @@ export class DreamingUiBridge extends TypertRemoteService {
 
   run(request: ProjectRequest, signal: AbortSignal) {
     return this.scoped(projectRequest, request, signal, input => this.operations.run(input.projectRoot, signal))
+  }
+
+  setLevel(request: LevelRequest, signal: AbortSignal) {
+    return this.scoped(levelRequest, request, signal, input => this.operations.setLevel(input.projectRoot, input.id, input.level, input.expectedRevision, signal))
   }
 
   forget(request: FactRequest, signal: AbortSignal) {

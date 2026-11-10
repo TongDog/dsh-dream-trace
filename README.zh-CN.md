@@ -23,7 +23,7 @@ npm pack
 在已有 dsh Web 配置中安装生成的包：
 
 ```sh
-dsh plugin --profile web add /绝对路径/dsh-plugin-dreaming-0.2.0.tgz
+dsh plugin --profile web add /绝对路径/dsh-plugin-dreaming-0.3.0.tgz
 ```
 
 也可以在 dsh 内让 `plugin_manager` 使用 `install_bundle` 安装本项目目录或包，具体以当前 dsh 工具支持的目标格式为准。插件不会自行改写用户配置。安装后重启 dsh，并刷新浏览器，确保加载新的服务端与界面代码。
@@ -74,6 +74,7 @@ dsh web --patch /绝对路径/dreaming.patch.yml
 | `dream_status` | 查看版本、处理状态、最近错误和可回滚版本 |
 | `memory_search` | 用关键词检索记忆，支持中文子串 |
 | `memory_read` | 按 ID 读取内容、来源、观察时间和可信程度 |
+| `memory_set_level` | 在来源项目调整层级；L1 跨项目共享需要当前版本号 |
 | `memory_forget` | 从当前记忆移除指定内容，保留历史版本 |
 | `dream_rollback` | 将指定历史版本恢复成一个新版本 |
 
@@ -81,7 +82,7 @@ dsh web --patch /绝对路径/dreaming.patch.yml
 
 `unchanged: true` 表示没有新前缀被处理，未调用模型也未生成版本；`unchanged: false` 且新增、更新、退役计数都为 0，则表示仅推进了处理游标。`dream_status` 的 `running` 和 `lastRun` 是进程内状态，重启后重置；记忆、游标和版本历史保留。
 
-每次请求只加载短索引，详细内容通过记忆工具读取。索引带记忆版本，实际注入内容进入标准 dsh 会话日志，可在回放时核对。普通工具模式与 PTC 模式共用同一套工具；复盘工作会话单独使用无可用工具的执行环境。
+在记忆详情中可以设置层级。L1 全局通用、L2 项目配置、L3 关键经验优先加载有证据的短结论；L4 展示标题，L5 按需检索。旧记录默认 L4。L1 由用户显式共享，其他已启用项目可读取结论，原始证据保留在来源项目。索引带记忆版本，实际注入内容进入标准 dsh 会话日志，可在回放时核对。普通工具模式与 PTC 模式共用同一套工具；复盘工作会话单独使用无可用工具的执行环境。
 
 ## 记忆怎样产生
 

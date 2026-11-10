@@ -25,7 +25,7 @@ codex plugin add dream-trace@dream-trace-local
 npm run pack:codex
 ```
 
-生成 `codex-plugin-dream-trace-0.2.0.tgz`。解压后，对包含 `.codex-plugin/plugin.json` 的 `package` 目录执行同样的 `codex plugin marketplace add /绝对路径/package` 和 `codex plugin add dream-trace@dream-trace-local`。包已包含运行代码及依赖，无需在解压目录执行 `npm install`。
+生成 `codex-plugin-dream-trace-0.3.0.tgz`。解压后，对包含 `.codex-plugin/plugin.json` 的 `package` 目录执行同样的 `codex plugin marketplace add /绝对路径/package` 和 `codex plugin add dream-trace@dream-trace-local`。包已包含运行代码及依赖，无需在解压目录执行 `npm install`。
 
 ### 启用项目和模型
 
@@ -94,6 +94,7 @@ npm run pack:codex
 | `memory_search` | 字面关键词检索，支持中文子串 |
 | `memory_read` | 读取完整记忆、原文引述、观察时间及来源 |
 | `dream_run` | 手动复盘一批已采集并到达 Stop 边界的观察 |
+| `memory_set_level` | 设置经验层级；设为 L1 时需明确共享意图及来源项目当前版本号 `expectedRevision` |
 | `memory_forget` | 移除当前记忆，保留历史 |
 | `dream_rollback` | 恢复历史内容与游标，形成新版本 |
 
@@ -114,7 +115,7 @@ node /绝对路径/codex-plugin/dist/cli.mjs run /绝对路径/项目
 
 hooks 只做本地采集和加载，不在用户工具执行路径中调用模型。后台复盘在 MCP 进程中运行；关闭 Codex/MCP 会取消正在运行的任务。重启后依靠持久化游标继续处理积压，不需要独立守护进程。最近错误和 `running` 状态是进程内信息，重启会重置。
 
-`SessionStart` 与 `UserPromptSubmit` 注入带版本的短索引；完整内容仍通过 MCP 读取。自动复盘产生的新版本会在下次上述 hook 或 `memory_index` 调用时可见，不会强行修改正在进行的模型请求。
+`SessionStart` 与 `UserPromptSubmit` 注入带版本的短索引；L1 全局通用、L2 项目配置、L3 关键经验优先加载有证据的短结论，L4 展示标题，L5 通过 MCP 按需检索。旧记录默认 L4。L1 只在同一插件配置启用的项目间共享，来源会话和引文留在原项目。改变共享结论会撤回旧共享，回滚会恢复目标版本的共享状态。自动复盘产生的新版本会在下次上述 hook 或 `memory_index` 调用时可见，不会强行修改正在进行的模型请求。
 
 ## 采集与证据边界
 
@@ -163,7 +164,7 @@ npm run check
 node scripts/verify-codex-package.mjs
 ```
 
-包验证使用临时项目、临时 Codex 配置、真实 MCP SDK stdio 客户端和本机脚本化模型响应，不发送个人历史、不消耗线上模型额度。另通过真实 Codex App Server 检查安装后的 5 个 hooks 和 7 个 MCP 工具。源码测试验证取消、复核拒绝、项目隔离和并发等边界；脚本化响应不证明线上模型的记忆质量。
+包验证使用临时项目、临时 Codex 配置、真实 MCP SDK stdio 客户端和本机脚本化模型响应，不发送个人历史、不消耗线上模型额度。另通过真实 Codex App Server 检查安装后的 5 个 hooks 和 8 个 MCP 工具。源码测试验证取消、复核拒绝、项目隔离和并发等边界；脚本化响应不证明线上模型的记忆质量。
 
 可选的真实 Codex 登录验证仅使用独立临时项目中的合成证据，会消耗 Codex 额度；不读写个人项目记忆：
 

@@ -34,7 +34,7 @@ type Trace = z.infer<typeof traceSchema>
 type Record = z.infer<typeof recordSchema>
 export const traceId = (sessionId: string) => `codex:${sessionId}`
 
-const ownTool = (name: string) => /(?:^|__)(?:dream_run|dream_status|dream_rollback|memory_search|memory_read|memory_forget|memory_index)$/.test(name)
+const ownTool = (name: string) => /(?:^|__)(?:dream_run|dream_status|dream_rollback|memory_search|memory_read|memory_set_level|memory_forget|memory_index)$/.test(name)
 const opaqueKeys = /^(?:reasoning(?:_.*)?|thinking|encrypted_content|image(?:_.*)?|audio(?:_.*)?|base64|data)$/i
 
 /** Keep visible tool data; binary/image/reasoning blocks never become evidence. */

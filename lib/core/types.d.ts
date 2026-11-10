@@ -10,6 +10,8 @@ export declare const citationSchema: z.ZodObject<{
     seq: z.ZodNumber;
     quote: z.ZodString;
 }, z.core.$strict>;
+export declare const levelSchema: z.ZodUnion<readonly [z.ZodLiteral<1>, z.ZodLiteral<2>, z.ZodLiteral<3>, z.ZodLiteral<4>, z.ZodLiteral<5>]>;
+export type MemoryLevel = z.infer<typeof levelSchema>;
 export declare const updateSchema: z.ZodObject<{
     id: z.ZodOptional<z.ZodString>;
     title: z.ZodString;
@@ -21,6 +23,7 @@ export declare const updateSchema: z.ZodObject<{
         fact: "fact";
         pitfall: "pitfall";
     }>;
+    level: z.ZodOptional<z.ZodUnion<readonly [z.ZodLiteral<2>, z.ZodLiteral<3>, z.ZodLiteral<4>, z.ZodLiteral<5>]>>;
     status: z.ZodEnum<{
         supported: "supported";
         uncertain: "uncertain";
@@ -44,6 +47,7 @@ export declare const proposalSchema: z.ZodObject<{
             fact: "fact";
             pitfall: "pitfall";
         }>;
+        level: z.ZodOptional<z.ZodUnion<readonly [z.ZodLiteral<2>, z.ZodLiteral<3>, z.ZodLiteral<4>, z.ZodLiteral<5>]>>;
         status: z.ZodEnum<{
             supported: "supported";
             uncertain: "uncertain";
@@ -90,6 +94,7 @@ export declare const factSchema: z.ZodObject<{
         fact: "fact";
         pitfall: "pitfall";
     }>;
+    level: z.ZodDefault<z.ZodUnion<readonly [z.ZodLiteral<1>, z.ZodLiteral<2>, z.ZodLiteral<3>, z.ZodLiteral<4>, z.ZodLiteral<5>]>>;
     status: z.ZodEnum<{
         supported: "supported";
         uncertain: "uncertain";
@@ -111,6 +116,59 @@ export declare const factSchema: z.ZodObject<{
     retiredReason: z.ZodOptional<z.ZodString>;
 }, z.core.$strict>;
 export type MemoryFact = z.infer<typeof factSchema>;
+export declare const visibleFactSchema: z.ZodUnion<readonly [z.ZodObject<{
+    id: z.ZodString;
+    title: z.ZodString;
+    content: z.ZodString;
+    category: z.ZodEnum<{
+        procedure: "procedure";
+        decision: "decision";
+        preference: "preference";
+        fact: "fact";
+        pitfall: "pitfall";
+    }>;
+    level: z.ZodDefault<z.ZodUnion<readonly [z.ZodLiteral<1>, z.ZodLiteral<2>, z.ZodLiteral<3>, z.ZodLiteral<4>, z.ZodLiteral<5>]>>;
+    status: z.ZodEnum<{
+        supported: "supported";
+        uncertain: "uncertain";
+        stale: "stale";
+    }>;
+    sources: z.ZodArray<z.ZodObject<{
+        sessionId: z.ZodString;
+        seq: z.ZodNumber;
+        quote: z.ZodString;
+        observedAt: z.ZodISODateTime;
+        kind: z.ZodEnum<{
+            user: "user";
+            assistant: "assistant";
+            tool: "tool";
+        }>;
+    }, z.core.$strict>>;
+    createdAt: z.ZodISODateTime;
+    updatedAt: z.ZodISODateTime;
+    retiredReason: z.ZodOptional<z.ZodString>;
+}, z.core.$strict>, z.ZodObject<{
+    id: z.ZodString;
+    title: z.ZodString;
+    content: z.ZodString;
+    category: z.ZodEnum<{
+        procedure: "procedure";
+        decision: "decision";
+        preference: "preference";
+        fact: "fact";
+        pitfall: "pitfall";
+    }>;
+    createdAt: z.ZodISODateTime;
+    updatedAt: z.ZodISODateTime;
+    retiredReason: z.ZodOptional<z.ZodString>;
+    level: z.ZodLiteral<1>;
+    status: z.ZodLiteral<"supported">;
+    inherited: z.ZodLiteral<true>;
+    sources: z.ZodTuple<[], null>;
+}, z.core.$strict>]>;
+export type VisibleFact = MemoryFact & {
+    inherited?: true;
+};
 export declare const stateSchema: z.ZodObject<{
     schemaVersion: z.ZodLiteral<1>;
     projectId: z.ZodString;
@@ -129,6 +187,7 @@ export declare const stateSchema: z.ZodObject<{
             fact: "fact";
             pitfall: "pitfall";
         }>;
+        level: z.ZodDefault<z.ZodUnion<readonly [z.ZodLiteral<1>, z.ZodLiteral<2>, z.ZodLiteral<3>, z.ZodLiteral<4>, z.ZodLiteral<5>]>>;
         status: z.ZodEnum<{
             supported: "supported";
             uncertain: "uncertain";

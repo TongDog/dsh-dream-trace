@@ -5,7 +5,7 @@ import { mkdir, open, readFile, realpath, rename, stat, unlink } from 'node:fs/p
 import { dirname, join } from 'node:path'
 import lockfile from 'proper-lockfile'
 import { z } from 'zod'
-import { CoreError, stateSchema, type MemoryState } from './types.ts'
+import { CoreError, levelSchema, stateSchema, type MemoryLevel, type MemoryState, type VisibleFact } from './types.ts'
 
 const pointerSchema = z.object({ revision: z.number().int().positive(), hash: z.string().regex(/^[a-f0-9]{64}$/) }).strict()
 function missing(error: unknown): boolean { return error instanceof Error && 'code' in error && error.code === 'ENOENT' }
@@ -36,14 +36,56 @@ export class MemoryStore {
     } catch (error) { throw new CoreError('CORRUPT_STORE', `Cannot validate memory revision ${revision}`, { cause: error }) }
   }
 
+  private async pointer() {
+    let text: string
+    try { text = await readFile(join(this.directory, 'current.json'), 'utf8') }
+    catch (error) { if (missing(error)) return null; throw error }
+    return pointerSchema.parse(JSON.parse(text))
+  }
+
   private async current(): Promise<{ state: MemoryState; hash: string | null }> {
-    let pointer: string
-    try { pointer = await readFile(join(this.directory, 'current.json'), 'utf8') }
-    catch (error) { if (missing(error)) return { state: this.empty(), hash: null }; throw error }
     try {
-      const parsed = pointerSchema.parse(JSON.parse(pointer))
-      return { state: await this.loadRevision(parsed.revision, parsed.hash), hash: parsed.hash }
+      const pointer = await this.pointer()
+      if (!pointer) return { state: this.empty(), hash: null }
+      return { state: await this.loadRevision(pointer.revision, pointer.hash), hash: pointer.hash }
     } catch (error) { throw new CoreError('CORRUPT_STORE', 'Cannot validate current memory pointer', { cause: error }) }
+  }
+
+  private sharedCache?: { hash: string; facts: VisibleFact[] }
+
+  /** Only re-read an enabled sibling's revision when its current pointer changes. */
+  async sharedFacts(): Promise<VisibleFact[]> {
+    const pointer = await this.pointer()
+    if (!pointer) return []
+    if (this.sharedCache?.hash !== pointer.hash) {
+      const state = await this.loadRevision(pointer.revision, pointer.hash)
+      const facts: VisibleFact[] = []
+      for (const fact of state.facts) {
+        if (fact.level !== 1 || fact.status !== 'supported') continue
+        const id = 'shared:' + digest(JSON.stringify([this.projectId, fact.id]))
+        facts.push({ id, title: fact.title, content: fact.content, category: fact.category,
+          createdAt: fact.createdAt, updatedAt: fact.updatedAt, level: 1, status: 'supported', inherited: true, sources: [] })
+      }
+      this.sharedCache = { hash: pointer.hash, facts }
+    }
+    return structuredClone(this.sharedCache.facts)
+  }
+
+  async setLevel(id: string, level: MemoryLevel, expectedRevision: number | undefined, signal?: AbortSignal): Promise<MemoryState> {
+    levelSchema.parse(level)
+    return this.transact(async current => {
+      const fact = current.facts.find(item => item.id === id)
+      if (!fact) throw new CoreError('NOT_FOUND', 'Change the memory level in its source project.')
+      if (fact.status === 'stale') throw new Error('Retired memories cannot be promoted.')
+      if (expectedRevision !== undefined && expectedRevision !== current.revision) throw new Error('Memory changed; refresh the source project and retry.')
+      if (level === 1 && (fact.status !== 'supported' || expectedRevision === undefined)) {
+        throw new Error('Sharing requires a supported memory and the current source project revision. Review its title and content before sharing.')
+      }
+      if (fact.level === level) return null
+      fact.level = level
+      fact.updatedAt = new Date().toISOString()
+      return current
+    }, signal)
   }
 
   /** @returns The current immutable snapshot, or empty state before the first commit. */

@@ -10,6 +10,7 @@ window.__ModuleLoader__.load({
     const NS = 'dreaming.memory';
     const PANEL = 'dreaming-memory';
     const categories = ['procedure', 'decision', 'preference', 'fact', 'pitfall'];
+    const levels = [1, 2, 3, 4, 5];
     const statuses = ['supported', 'uncertain', 'stale'];
     const css = `
 .dreaming-page{height:100%;width:100%;min-width:0;min-height:0;overflow:auto;box-sizing:border-box;padding:28px 32px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);font-size:14px;line-height:1.55;}
@@ -42,6 +43,7 @@ window.__ModuleLoader__.load({
       const [snapshot, setSnapshot] = useState(null);
       const [selected, setSelected] = useState('');
       const [query, setQuery] = useState('');
+      const [levelFilter, setLevelFilter] = useState(0);
       const [category, setCategory] = useState('all');
       const [status, setStatus] = useState('active');
       const [tab, setTab] = useState('memories');
@@ -104,6 +106,7 @@ window.__ModuleLoader__.load({
         setConfirmation(null);
         setNotice(null);
         setQuery('');
+        setLevelFilter(0);
         void load(project);
       }, [project, load]);
       useEffect(() => {
@@ -137,13 +140,13 @@ window.__ModuleLoader__.load({
       const badge = (kind, value) => h('span', { className: `dreaming-badge ${kind === 'status' ? value : ''}` }, t(`${kind}.${value}`));
       const empty = (title, body) => h('div', { className: 'dreaming-empty' }, h(Icon, { size: 34 }), h('strong', null, title), h('p', null, body));
       const all = snapshot?.memories || [];
-      const filtered = all.filter(f => (category === 'all' || f.category === category) && (status === 'all' || status === 'active' ? status === 'all' || f.status !== 'stale' : f.status === status) && (!query.trim() || `${f.title}\n${f.content}\n${f.sources.map(s => s.quote).join('\n')}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt));
+      const filtered = all.filter(f => (!levelFilter || f.level === levelFilter) && (category === 'all' || f.category === category) && (status === 'all' || status === 'active' ? status === 'all' || f.status !== 'stale' : f.status === status) && (!query.trim() || `${f.title}\n${f.content}\n${f.sources.map(s => s.quote).join('\n')}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))).sort((a,b) => a.level - b.level || b.updatedAt.localeCompare(a.updatedAt));
       const fact = filtered.find(f => f.id === selected) || filtered[0];
       const locked = busy || loading || snapshot?.running || Boolean(error);
       const renderConfirm = () => confirmation && h('div', { className: 'dreaming-confirm', role: 'alert' },
-        h('strong', null, confirmation.method === 'forget' ? t('confirmForgetTitle') : `${t('confirmRollbackTitle')} #${confirmation.revision}`),
-        h('p', { className: 'dreaming-small dreaming-muted' }, t(confirmation.method === 'forget' ? 'confirmForgetBody' : 'confirmRollbackBody')),
-        h('div', { className: 'dreaming-actions' }, button(t('cancel'), () => setConfirmation(null)), button(t('confirm'), () => void act(confirmation.method, confirmation.method === 'forget' ? { id: confirmation.id } : { revision: confirmation.revision }), { className: 'dreaming-button danger', disabled: locked })));
+        h('strong', null, confirmation.method === 'setLevel' ? t('shareTitle') : confirmation.method === 'forget' ? t('confirmForgetTitle') : `${t('confirmRollbackTitle')} #${confirmation.args.revision}`),
+        h('p', { className: 'dreaming-small dreaming-muted' }, t(confirmation.method === 'setLevel' ? 'shareBody' : confirmation.method === 'forget' ? 'confirmForgetBody' : 'confirmRollbackBody')),
+        h('div', { className: 'dreaming-actions' }, button(t('cancel'), () => setConfirmation(null)), button(t('confirm'), () => void act(confirmation.method, confirmation.args), { className: 'dreaming-button danger', disabled: locked })));
       return h('section', { className: 'dreaming-page', 'aria-label': t('panel') },
         h('style', null, css),
         h('div', { className: 'dreaming-top' },
@@ -152,7 +155,7 @@ window.__ModuleLoader__.load({
         error && h('div', { role: 'alert', className: 'dreaming-message dreaming-error' }, error),
         notice && h('div', { role: 'status', className: 'dreaming-message' }, notice.method === 'run'
           ? `${t('dreamDone')} ${t('created')}: ${notice.value.created} · ${t('updated')}: ${notice.value.updated} · ${t('retired')}: ${notice.value.retired}${notice.value.unchanged ? ` · ${t('unchanged')}` : ''}`
-          : `${t(notice.method === 'forget' ? 'forgotten' : 'rolledBack')} #${notice.value.revision}`),
+          : `${t(notice.method === 'setLevel' ? 'levelChanged' : notice.method === 'forget' ? 'forgotten' : 'rolledBack')} #${notice.value.revision}`),
         projects === null && !error && h('p', { role: 'status', className: 'dreaming-muted' }, t('loading')),
         projects?.length === 0 && empty(t('noProjects'), t('configureProjects')),
         projects?.length > 0 && h('label', { className: 'dreaming-field dreaming-project' }, h('span', { className: 'dreaming-small dreaming-muted' }, t('project')), h('select', { className: 'dreaming-select', value: project, title: project, disabled: busy, onChange: e => setProject(e.target.value) }, projects.map(root => h('option', { key: root, value: root }, `${root.split(/[\\/]/).filter(Boolean).pop()} — ${root}`)))),
@@ -164,26 +167,34 @@ window.__ModuleLoader__.load({
             h('div', null,
               h('div', { className: 'dreaming-filters' },
                 h('input', { type: 'search', className: 'dreaming-search', value: query, onChange: e => setQuery(e.target.value), placeholder: t('search'), 'aria-label': t('search') }),
+                h('select', { className: 'dreaming-select', value: levelFilter, 'aria-label': t('levelFilter'), onChange: e => setLevelFilter(Number(e.target.value)) }, h('option', { value: 0 }, t('allLevels')), ...levels.map(l => h('option', { key: l, value: l }, t(`level.${l}`)))),
                 h('div', { className: 'dreaming-row' },
                   h('select', { className: 'dreaming-select', value: category, 'aria-label': t('categoryFilter'), onChange: e => setCategory(e.target.value) }, h('option', { value: 'all' }, t('allCategories')), ...categories.map(c => h('option', { key: c, value: c }, t(`category.${c}`)))),
                   h('select', { className: 'dreaming-select', value: status, 'aria-label': t('statusFilter'), onChange: e => setStatus(e.target.value) }, ...['active','all',...statuses].map(s => h('option', { key: s, value: s }, t(`status.${s}`)))))),
               h('p', { className: 'dreaming-small dreaming-muted dreaming-caption', 'aria-live': 'polite' }, `${filtered.length} ${t('results')}`),
-              filtered.length ? h('div', { className: 'dreaming-list', 'aria-label': t('memories') }, ...filtered.map(f => h('button', { type: 'button', key: f.id, className: 'dreaming-card', 'aria-pressed': f.id === fact?.id, onClick: () => { setSelected(f.id); setConfirmation(null); } }, h('div', { className: 'dreaming-tags' }, badge('category', f.category), badge('status', f.status)), h('span', { className: 'dreaming-card-title' }, f.title), h('span', { className: 'dreaming-preview' }, f.content), h('span', { className: 'dreaming-small dreaming-muted' }, `${f.sources.length} ${t('sources')} · ${formatDate(f.updatedAt)}`))))
+              filtered.length ? h('div', { className: 'dreaming-list', 'aria-label': t('memories') }, ...filtered.map(f => h('button', { type: 'button', key: f.id, className: 'dreaming-card', 'aria-pressed': f.id === fact?.id, onClick: () => { setSelected(f.id); setConfirmation(null); } }, h('div', { className: 'dreaming-tags' }, badge('level', f.level), badge('category', f.category), badge('status', f.status)), h('span', { className: 'dreaming-card-title' }, f.title), h('span', { className: 'dreaming-preview' }, f.content), h('span', { className: 'dreaming-small dreaming-muted' }, `${f.sources.length} ${t('sources')} · ${formatDate(f.updatedAt)}`))))
                 : empty(t(all.length ? 'noMatches' : 'noMemories'), t(all.length ? 'adjustFilters' : 'firstDream'))),
             fact ? h('article', { className: 'dreaming-detail', 'aria-label': t('detail') },
-              h('div', { className: 'dreaming-tags' }, badge('category', fact.category), badge('status', fact.status)),
+              h('div', { className: 'dreaming-tags' }, badge('level', fact.level), badge('category', fact.category), badge('status', fact.status)),
               h('h2', null, fact.title), h('p', { className: 'dreaming-small dreaming-muted' }, `${t('updatedAt')} ${formatDate(fact.updatedAt)}`),
               h('p', { className: 'dreaming-content' }, fact.content),
+              fact.inherited ? h('p', { className: 'dreaming-small dreaming-muted' }, t('inherited')) : fact.status !== 'stale' && h('label', { className: 'dreaming-field' }, t('levelFilter'),
+                h('select', { className: 'dreaming-select', value: fact.level, disabled: locked, onChange: e => {
+                  const level = Number(e.target.value);
+                  if (level === 1) setConfirmation({ method: 'setLevel', args: { id: fact.id, level: 1, expectedRevision: snapshot.revision } });
+                  else void act('setLevel', { id: fact.id, level, expectedRevision: snapshot.revision });
+                } }, levels.map(l => h('option', { key: l, value: l, disabled: l === 1 && fact.status !== 'supported' }, t(`level.${l}`))))),
+              confirmation?.method === 'setLevel' && confirmation.args.id === fact.id && renderConfirm(),
               fact.retiredReason && h('div', { className: 'dreaming-message' }, `${t('retiredReason')}: ${fact.retiredReason}`),
               h('hr', { className: 'dreaming-divider' }), h('h3', null, `${t('evidence')} · ${fact.sources.length}`),
-              h('p', { className: 'dreaming-small dreaming-muted' }, t('evidenceHint')),
+              !fact.inherited && h('p', { className: 'dreaming-small dreaming-muted' }, t('evidenceHint')),
               ...fact.sources.map((source, index) => h('div', { className: 'dreaming-source', key: `${source.sessionId}:${source.seq}:${index}` },
                 h('div', { className: 'dreaming-tags' }, h('span', { className: 'dreaming-badge' }, t(`source.${source.kind}`)), h('span', { className: 'dreaming-small dreaming-muted' }, formatDate(source.observedAt))),
                 h('blockquote', null, source.quote), h('code', null, `${source.sessionId} · #${source.seq}`))),
-              h('div', { className: 'dreaming-detail-footer' }, h('span', { className: 'dreaming-small dreaming-muted' }, `${t('createdAt')} ${formatDate(fact.createdAt)}`), button(t('forget'), () => setConfirmation({ method: 'forget', id: fact.id }), { className: 'dreaming-button danger', disabled: locked })), confirmation?.method === 'forget' && confirmation.id === fact.id && renderConfirm())
+              h('div', { className: 'dreaming-detail-footer' }, h('span', { className: 'dreaming-small dreaming-muted' }, `${t('createdAt')} ${formatDate(fact.createdAt)}`), !fact.inherited && button(t('forget'), () => setConfirmation({ method: 'forget', args: { id: fact.id } }), { className: 'dreaming-button danger', disabled: locked })), confirmation?.method === 'forget' && confirmation.args.id === fact.id && renderConfirm())
               : empty(t('selectMemory'), t('selectMemoryBody')))
             : h('div', null, h('p', { className: 'dreaming-muted dreaming-caption' }, t('historyHint')), confirmation?.method === 'rollback' && renderConfirm(),
-              !snapshot.revisions.length && empty(t('noHistory'), t('firstDream')), h('div', { className: 'dreaming-history' }, ...[...snapshot.revisions].sort((a,b) => b.revision - a.revision).map(rev => h('div', { key: rev.revision, className: 'dreaming-history-row' }, h('div', null, h('strong', null, `${t('revision')} #${rev.revision}`), rev.revision === snapshot.revision && h('span', { className: 'dreaming-badge', style: { marginLeft: 8 } }, t('current')), h('p', { className: 'dreaming-small dreaming-muted' }, `${formatDate(rev.createdAt)} · ${rev.facts} ${t('results')}`)), button(t('rollback'), () => setConfirmation({ method: 'rollback', revision: rev.revision }), { disabled: locked || rev.revision === snapshot.revision }))))),
+              !snapshot.revisions.length && empty(t('noHistory'), t('firstDream')), h('div', { className: 'dreaming-history' }, ...[...snapshot.revisions].sort((a,b) => b.revision - a.revision).map(rev => h('div', { key: rev.revision, className: 'dreaming-history-row' }, h('div', null, h('strong', null, `${t('revision')} #${rev.revision}`), rev.revision === snapshot.revision && h('span', { className: 'dreaming-badge', style: { marginLeft: 8 } }, t('current')), h('p', { className: 'dreaming-small dreaming-muted' }, `${formatDate(rev.createdAt)} · ${rev.facts} ${t('results')}`)), button(t('rollback'), () => setConfirmation({ method: 'rollback', args: { revision: rev.revision } }), { disabled: locked || rev.revision === snapshot.revision }))))),
           h('p', { className: 'dreaming-small dreaming-muted dreaming-caption' }, `${t('automation')}: ${snapshot.autoRunAfterTurn ? t('afterTurn') : snapshot.autoRunIntervalMinutes ? t('periodic') : t('manual')}${snapshot.autoRunIntervalMinutes ? ` · ${snapshot.autoRunIntervalMinutes} ${t('minutes')}` : ''} · ${t('lastOperation')}: ${formatDate(snapshot.lastRun?.at)}`),
           snapshot.lastRun?.error && h('p', { className: 'dreaming-small dreaming-error' }, snapshot.lastRun.error)));
     }

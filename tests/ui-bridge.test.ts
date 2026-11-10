@@ -39,7 +39,7 @@ function failure(result: RemoteResult<unknown>, code: string) {
 }
 function fact(id: string, status: MemoryFact['status'] = 'supported'): MemoryFact {
   const time = '2026-01-01T00:00:00.000Z'
-  return { id, title: `Test command ${id}`, content: 'Run npm test in this project.', category: 'procedure', status,
+  return { id, level: 4, title: `Test command ${id}`, content: 'Run npm test in this project.', category: 'procedure', status,
     createdAt: time, updatedAt: time,
     sources: [{ sessionId: 'original-conversation', seq: 4, quote: 'Run npm test in this project.', kind: 'user', observedAt: time }],
     ...(status === 'stale' ? { retiredReason: 'Superseded by a later command.' } : {}),
@@ -127,10 +127,11 @@ test('the bridge rejects guest users, path substitution, unknown fields, and mal
   try {
     const ui = f.client.remote.dreamingUi
     f.host.remoteAccess.registerPolicy('dreaming-test-guest', { bindings: () => [{
-      resource: { kind: 'global' }, role: { name: 'test-broad-grant', resource: 'global', actions: ['dreamingUi/projects', 'dreamingUi/snapshot', 'dreamingUi/forget'] },
+      resource: { kind: 'global' }, role: { name: 'test-broad-grant', resource: 'global', actions: ['dreamingUi/projects', 'dreamingUi/snapshot', 'dreamingUi/forget', 'dreamingUi/setLevel'] },
     }] })
     f.setPeer({ kind: 'dreaming-test-guest' })
     failure(await ui.projects(), 'dreaming/forbidden')
+    failure(await ui.setLevel({ projectRoot: f.projectRoot, id: 'first', level: 1, expectedRevision: 1 }), 'dreaming/forbidden')
     failure(await ui.snapshot({ projectRoot: f.projectRoot }), 'dreaming/forbidden')
     failure(await ui.forget({ projectRoot: f.projectRoot, id: 'first' }), 'dreaming/forbidden')
     f.setPeer({ kind: 'owner' })
@@ -243,4 +244,26 @@ test('the actual Client factory activates under a plugin fiber with declared dyn
     await mounted.dispose()
     assert.equal(ctx.typert.remotes.get('dreamingUi/projects'), undefined)
   } finally { await ctx.fiber.dispose() }
+})
+
+test('level changes through the UI and dsh tools share only the approved record across enabled projects', async () => {
+  const f = await fixture()
+  try {
+    const ui = f.client.remote.dreamingUi
+    const request = { projectRoot: f.projectRoot, id: 'first', level: 1 as const, expectedRevision: 1 }
+    assert.equal((await ui.setLevel(request)).ok, true)
+    const other = { projectRoot: f.secondRoot }
+    const visible = value(await ui.snapshot(other)).memories
+    assert.equal(visible.length, 1)
+    const shared = visible[0]
+    assert.equal(shared.level, 1)
+    assert.deepEqual(shared.sources, [])
+    assert.doesNotMatch(JSON.stringify(visible), /original-conversation|Test command second/)
+    assert.deepEqual(value(await ui.read({ ...other, id: shared.id })), shared)
+    assert.deepEqual(value(await ui.search({ ...other, query: 'npm' })), visible)
+    failure(await ui.forget({ ...other, id: shared.id }), 'dreaming/operation-failed')
+    assert.equal((await f.tool('memory_set_level', { id: 'first', level: 5 })).isError, false)
+    assert.deepEqual(value(await ui.snapshot(other)).memories, [])
+    assert.equal(value(await ui.read({ projectRoot: f.projectRoot, id: 'first' })).level, 5)
+  } finally { await f.close() }
 })

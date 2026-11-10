@@ -2,8 +2,8 @@
 import type { Context } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type { DreamingService } from './index.ts';
-import { type FactRequest, type ProjectRequest, type RollbackRequest, type SearchRequest } from './ui-protocol.ts';
-export type DreamingUiOperations = Pick<DreamingService, 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'forget' | 'rollback'>;
+import { type FactRequest, type LevelRequest, type ProjectRequest, type RollbackRequest, type SearchRequest } from './ui-protocol.ts';
+export type DreamingUiOperations = Pick<DreamingService, 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'setLevel' | 'forget' | 'rollback'>;
 declare module '@deepseek-ai/cordis' {
     interface Context {
         dreamingUi: DreamingUiBridge;
@@ -17,23 +17,7 @@ export declare class DreamingUiBridge extends TypertRemoteService {
     constructor(ctx: Context, operations: DreamingUiOperations);
     projects(signal: AbortSignal): string[];
     snapshot(request: ProjectRequest, signal: AbortSignal): Promise<{
-        memories: {
-            id: string;
-            title: string;
-            content: string;
-            category: "procedure" | "decision" | "preference" | "fact" | "pitfall";
-            status: "supported" | "uncertain" | "stale";
-            sources: {
-                sessionId: string;
-                seq: number;
-                quote: string;
-                observedAt: string;
-                kind: "user" | "assistant" | "tool";
-            }[];
-            createdAt: string;
-            updatedAt: string;
-            retiredReason?: string | undefined;
-        }[];
+        memories: import("./core/types.ts").VisibleFact[];
         projectRoot: string;
         storageDirectory: string;
         revision: number;
@@ -63,40 +47,8 @@ export declare class DreamingUiBridge extends TypertRemoteService {
         autoRunAfterTurn: boolean;
         autoRunIntervalMinutes: number;
     }>;
-    search(request: SearchRequest, signal: AbortSignal): Promise<{
-        id: string;
-        title: string;
-        content: string;
-        category: "procedure" | "decision" | "preference" | "fact" | "pitfall";
-        status: "supported" | "uncertain" | "stale";
-        sources: {
-            sessionId: string;
-            seq: number;
-            quote: string;
-            observedAt: string;
-            kind: "user" | "assistant" | "tool";
-        }[];
-        createdAt: string;
-        updatedAt: string;
-        retiredReason?: string | undefined;
-    }[]>;
-    read(request: FactRequest, signal: AbortSignal): Promise<{
-        id: string;
-        title: string;
-        content: string;
-        category: "procedure" | "decision" | "preference" | "fact" | "pitfall";
-        status: "supported" | "uncertain" | "stale";
-        sources: {
-            sessionId: string;
-            seq: number;
-            quote: string;
-            observedAt: string;
-            kind: "user" | "assistant" | "tool";
-        }[];
-        createdAt: string;
-        updatedAt: string;
-        retiredReason?: string | undefined;
-    }>;
+    search(request: SearchRequest, signal: AbortSignal): Promise<import("./core/types.ts").VisibleFact[]>;
+    read(request: FactRequest, signal: AbortSignal): Promise<import("./core/types.ts").VisibleFact>;
     run(request: ProjectRequest, signal: AbortSignal): Promise<{
         sessionsRead: number;
         eventsSelected: number;
@@ -107,6 +59,9 @@ export declare class DreamingUiBridge extends TypertRemoteService {
         updated: number;
         retired: number;
         unchanged: boolean;
+    }>;
+    setLevel(request: LevelRequest, signal: AbortSignal): Promise<{
+        revision: number;
     }>;
     forget(request: FactRequest, signal: AbortSignal): Promise<{
         revision: number;

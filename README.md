@@ -12,10 +12,10 @@ Dreaming 是一个面向 **DeepSeek Harness（dsh）** 的社区插件。它回�
 
 | 项目 | 当前实现 |
 |---|---|
-| 插件版本 | `0.2.0` |
+| 插件版本 | `0.3.0` |
 | 兼容基线 | **DeepSeek Harness `0.2.2-rc.1`** |
 | 运行环境 | Node.js `>=24.9.0` |
-| 使用入口 | Web 侧栏「记忆」、六个智能体工具、可选后台任务 |
+| 使用入口 | Web 侧栏「记忆」、七个智能体工具、可选后台任务 |
 | 存储与检索 | 项目隔离的本地 JSON 版本文件；关键词与中文子串检索 |
 | 默认行为 | 项目列表为空，自动复盘关闭，语义复核开启 |
 | 许可证 | [MIT](LICENSE) |
@@ -32,7 +32,7 @@ Dreaming 是一个面向 **DeepSeek Harness（dsh）** 的社区插件。它回�
 npm ci
 npm run check
 npm pack
-dsh plugin --profile web add /absolute/path/dsh-plugin-dreaming-0.2.0.tgz
+dsh plugin --profile web add /absolute/path/dsh-plugin-dreaming-0.3.0.tgz
 ```
 
 把包路径替换为实际生成文件的绝对路径。这里以现有 `web` 配置为例；使用其他配置时，安装和启动须选择同一个配置。更新已安装的代码后，重启 dsh 并刷新浏览器。
@@ -78,7 +78,7 @@ dsh web --patch /absolute/path/to/dreaming.patch.yml
 flowchart TB
     subgraph Entry[使用入口]
         UI[Web 记忆面板]
-        Tools[六个智能体工具]
+        Tools[七个智能体工具]
         Auto[回合结束延迟 / 周期定时器]
     end
 
@@ -125,7 +125,7 @@ flowchart TB
 | 模型适配 | 创建单次响应的工作会话，禁用工具，等待日志持久化并释放会话资源 | [src/worker.ts](src/worker.ts) |
 | 版本存储 | 写锁、校验和、原子发布、历史遍历、移除与回滚 | [src/core/store.ts](src/core/store.ts) |
 | 数据与召回 | 记忆/引用/提案类型、关键词检索、按 ID 读取、受限索引、凭据模式检查 | [types.ts](src/core/types.ts) · [index.ts](src/core/index.ts) · [security.ts](src/core/security.ts) |
-| 智能体工具 | 注册六个工具，将调用会话映射到允许的项目 | [src/tools.ts](src/tools.ts) |
+| 智能体工具 | 注册七个工具，将调用会话映射到允许的项目 | [src/tools.ts](src/tools.ts) |
 | Web 接口 | 所有者权限、准确项目根目录校验、Host/Client 共用的请求与结果协议 | [ui-bridge.ts](src/ui-bridge.ts) · [ui-protocol.ts](src/ui-protocol.ts) |
 | Web 客户端 | React 面板、项目切换、本地筛选、证据详情和管理操作 | [client/source.js](client/source.js) · [locale/](locale/) |
 
@@ -166,7 +166,19 @@ Web 通过 dsh 已有的类型化 Remote 通道调用 `dreamingUi`，不单独�
 
 ## 后续会话如何使用记忆
 
-在匹配项目的 `agent/pre-step` 阶段，服务读取最新快照，通过 `systemPrompt.context` 提供受限索引。索引只包含版本提示、记忆 ID、标题和状态，详细内容由智能体按需调用工具获取；注入内容进入标准 dsh 会话日志，便于回放核对。
+在匹配项目的 `agent/pre-step` 阶段，服务读取最新快照，通过 `systemPrompt.context` 提供受限索引。每条带有 ID、层级、标题与证据状态。层级决定哪些结论随请求加载，实际注入内容可以在 dsh 会话日志中查看。
+
+| 层级 | 适用范围与例子 | 进入上下文的方式 |
+|---|---|---|
+| L1 全局通用 | 用户明确共享给本插件所有已启用项目的约定 | 优先加载有据可查的短结论 |
+| L2 项目配置 | 当前项目的服务器地址、工具链或用户习惯 | 有据可查时直接加载短结论 |
+| L3 关键经验 | 漏掉会导致发布失败的构建顺序 | 有据可查时直接加载短结论 |
+| L4 常规经验 | 可复用的普通操作 | 索引展示标题，按需读取 |
+| L5 备查细节 | 低频排错细节 | 通过搜索、按 ID 读取或在面板查看 |
+
+复盘可以调整 L2–L5。旧记录首次读取时按 L4 处理。只有在来源项目显式选择 L1 才会共享，其他项目可读结论，原始证据留在来源项目。可以在 Web 记忆详情的「记忆层级」中改级，也可以让智能体调用 `memory_set_level`。降级、移除或退役会在下一次读取时停止共享；回滚会恢复当时的共享状态。复盘改写已共享的标题或正文后，新内容回到项目内。
+
+自动加载受 `maxIndexChars` 总预算约束。超过 360 字符或无法完整放入的结论退回标题；待确认也只显示标题。同标题的已证实 L2 配置在索引中覆盖 L1 默认值，搜索仍可找到两条记录。
 
 ```mermaid
 sequenceDiagram
@@ -189,11 +201,11 @@ sequenceDiagram
     end
 ```
 
-当前没有向量数据库。`memory_search` 对有效记忆的标题和内容进行关键词与中文子串匹配，按命中数、更新时间排序；Web 搜索在已加载快照中匹配标题、内容和证据原文。两种搜索的范围不同，记忆文本始终应作为可核对的历史数据使用。
+当前没有向量数据库。`memory_search` 对有效记忆的标题和内容进行关键词与中文子串匹配，先按命中数排序，命中数相同再比较层级、证据状态和更新时间；Web 搜索在已加载快照中匹配标题、内容和证据原文。两种搜索的范围不同，记忆文本始终应作为可核对的历史数据使用。
 
 ## 工具与配置
 
-六个工具与 Web 页面复用同一套服务操作。移除和回滚用于用户要求的管理操作，页面执行前会要求确认。
+七个工具与 Web 页面复用同一套服务操作。移除和回滚用于用户要求的管理操作，页面执行前会要求确认。
 
 | 工具 | 参数 | 用途 |
 |---|---|---|
@@ -201,6 +213,7 @@ sequenceDiagram
 | `dream_status` | 无 | 查询当前版本、运行状态、最近操作结果及可回滚版本 |
 | `memory_search` | `query`、可选 `limit` | 搜索有效记忆；空查询列出有效记录，受返回条数限制 |
 | `memory_read` | `id` | 读取完整记忆及证据，包括退役记录 |
+| `memory_set_level` | `id`、`level`、可选 `expectedRevision` | 调整来源项目记忆的层级；共享为 L1 时须传当前版本 |
 | `memory_forget` | `id` | 从当前版本移除记忆，保留历史版本 |
 | `dream_rollback` | `revision` | 把已提交历史版本的内容和游标恢复为新版本 |
 
