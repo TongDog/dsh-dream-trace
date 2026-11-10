@@ -11,10 +11,13 @@ export class CoreError extends Error {
 
 const id = z.string().min(1).max(256)
 export const citationSchema = z.object({ sessionId: id, seq: z.number().int().nonnegative(), quote: z.string().min(1).max(2000) }).strict()
+export const levelSchema = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
+export type MemoryLevel = z.infer<typeof levelSchema>
+const projectLevel = z.union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
 const category = z.enum(['procedure', 'decision', 'preference', 'fact', 'pitfall'])
 export const updateSchema = z.object({
   id: id.optional(), title: z.string().trim().min(1).max(160), content: z.string().trim().min(1).max(12000),
-  category, status: z.enum(['supported', 'uncertain']), evidence: z.array(citationSchema).min(1).max(12),
+  category, level: projectLevel.optional(), status: z.enum(['supported', 'uncertain']), evidence: z.array(citationSchema).min(1).max(12),
 }).strict()
 /** Only this data format can change memory; model output is never executable. */
 export const proposalSchema = z.object({
@@ -29,10 +32,22 @@ export const storedCitationSchema = citationSchema.extend({ observedAt: z.iso.da
 export type StoredCitation = z.infer<typeof storedCitationSchema>
 export const factSchema = z.object({
   id, title: z.string().min(1).max(160), content: z.string().min(1).max(12000), category,
-  status: z.enum(['supported', 'uncertain', 'stale']), sources: z.array(storedCitationSchema).min(1).max(12),
+  level: levelSchema.default(4), status: z.enum(['supported', 'uncertain', 'stale']), sources: z.array(storedCitationSchema).min(1).max(12),
   createdAt: z.iso.datetime(), updatedAt: z.iso.datetime(), retiredReason: z.string().max(1000).optional(),
 }).strict()
 export type MemoryFact = z.infer<typeof factSchema>
+// Projections shared with other projects never include source excerpts or session identifiers.
+export const visibleFactSchema = z.union([factSchema, factSchema.extend({
+  level: z.literal(1), status: z.literal('supported'), inherited: z.literal(true), sources: z.tuple([]),
+})])
+export type VisibleFact = MemoryFact & { inherited?: true }
+/** Visibility is an owner preference. Missing preferences in older revisions mean visible. */
+export function agentFacts<T extends { id: string }>(state: { facts: T[]; hiddenMemoryIds?: string[] }): T[] {
+  if (!state.hiddenMemoryIds?.length) return state.facts
+  const hidden = new Set(state.hiddenMemoryIds)
+  return state.facts.filter(fact => !hidden.has(fact.id))
+}
+
 const cursorNumber = z.number().int().nonnegative()
 // Zod's generic record parser omits __proto__; session IDs are opaque strings.
 const cursorSchema = z.unknown().transform((value, context): Record<string, number> => {
@@ -54,7 +69,7 @@ const cursorSchema = z.unknown().transform((value, context): Record<string, numb
 export const stateSchema = z.object({
   schemaVersion: z.literal(1), projectId: id, revision: z.number().int().nonnegative(),
   parentRevision: z.number().int().nonnegative().nullable(), parentHash: z.string().regex(/^[a-f0-9]{64}$/).nullable(), createdAt: z.iso.datetime(),
-  facts: z.array(factSchema), cursors: cursorSchema,
+  facts: z.array(factSchema), cursors: cursorSchema, hiddenMemoryIds: z.array(id).optional(),
 }).strict()
 export type MemoryState = z.infer<typeof stateSchema>
 /** An observable event; private model reasoning must never be supplied. */

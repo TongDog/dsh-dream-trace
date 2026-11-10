@@ -1,7 +1,7 @@
 /** Shared, browser-safe contracts for the existing Harness Remote carrier. */
 import { z } from 'zod';
 import type { RemoteResult, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol';
-import { factSchema } from './core/types.ts';
+import { visibleFactSchema } from './core/types.ts';
 export declare const projectRequest: z.ZodObject<{
     projectRoot: z.ZodString;
 }, z.core.$strict>;
@@ -13,6 +13,18 @@ export declare const searchRequest: z.ZodObject<{
 export declare const factRequest: z.ZodObject<{
     projectRoot: z.ZodString;
     id: z.ZodString;
+}, z.core.$strict>;
+export declare const visibilityRequest: z.ZodObject<{
+    projectRoot: z.ZodString;
+    id: z.ZodString;
+    visible: z.ZodBoolean;
+    expectedRevision: z.ZodNumber;
+}, z.core.$strict>;
+export declare const levelRequest: z.ZodObject<{
+    projectRoot: z.ZodString;
+    id: z.ZodString;
+    level: z.ZodUnion<readonly [z.ZodLiteral<1>, z.ZodLiteral<2>, z.ZodLiteral<3>, z.ZodLiteral<4>, z.ZodLiteral<5>]>;
+    expectedRevision: z.ZodOptional<z.ZodNumber>;
 }, z.core.$strict>;
 export declare const rollbackRequest: z.ZodObject<{
     projectRoot: z.ZodString;
@@ -53,7 +65,7 @@ declare const snapshotResult: z.ZodObject<{
     }, z.core.$strict>>;
     autoRunAfterTurn: z.ZodBoolean;
     autoRunIntervalMinutes: z.ZodNumber;
-    memories: z.ZodArray<z.ZodObject<{
+    memories: z.ZodArray<z.ZodUnion<readonly [z.ZodObject<{
         id: z.ZodString;
         title: z.ZodString;
         content: z.ZodString;
@@ -64,6 +76,7 @@ declare const snapshotResult: z.ZodObject<{
             fact: "fact";
             pitfall: "pitfall";
         }>;
+        level: z.ZodDefault<z.ZodUnion<readonly [z.ZodLiteral<1>, z.ZodLiteral<2>, z.ZodLiteral<3>, z.ZodLiteral<4>, z.ZodLiteral<5>]>>;
         status: z.ZodEnum<{
             supported: "supported";
             uncertain: "uncertain";
@@ -83,7 +96,26 @@ declare const snapshotResult: z.ZodObject<{
         createdAt: z.ZodISODateTime;
         updatedAt: z.ZodISODateTime;
         retiredReason: z.ZodOptional<z.ZodString>;
-    }, z.core.$strict>>;
+    }, z.core.$strict>, z.ZodObject<{
+        id: z.ZodString;
+        title: z.ZodString;
+        content: z.ZodString;
+        category: z.ZodEnum<{
+            procedure: "procedure";
+            decision: "decision";
+            preference: "preference";
+            fact: "fact";
+            pitfall: "pitfall";
+        }>;
+        createdAt: z.ZodISODateTime;
+        updatedAt: z.ZodISODateTime;
+        retiredReason: z.ZodOptional<z.ZodString>;
+        level: z.ZodLiteral<1>;
+        status: z.ZodLiteral<"supported">;
+        inherited: z.ZodLiteral<true>;
+        sources: z.ZodTuple<[], null>;
+    }, z.core.$strict>]>>;
+    hiddenMemoryIds: z.ZodDefault<z.ZodArray<z.ZodString>>;
 }, z.core.$strict>;
 declare const runResult: z.ZodObject<{
     revision: z.ZodNumber;
@@ -99,6 +131,8 @@ declare const runResult: z.ZodObject<{
 export type ProjectRequest = z.infer<typeof projectRequest>;
 export type SearchRequest = z.infer<typeof searchRequest>;
 export type FactRequest = z.infer<typeof factRequest>;
+export type VisibilityRequest = z.infer<typeof visibilityRequest>;
+export type LevelRequest = z.infer<typeof levelRequest>;
 export type RollbackRequest = z.infer<typeof rollbackRequest>;
 export type MemorySnapshot = z.infer<typeof snapshotResult>;
 export type MemoryStatus = z.infer<typeof statusResult>;
@@ -107,9 +141,15 @@ export interface DreamingUiRemote {
     projects(signal?: AbortSignal): Promise<RemoteResult<string[]>>;
     snapshot(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<MemorySnapshot>>;
     status(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<MemoryStatus>>;
-    search(request: SearchRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof factSchema>[]>>;
-    read(request: FactRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof factSchema>>>;
+    search(request: SearchRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>[]>>;
+    read(request: FactRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>>>;
     run(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<DreamingRunResult>>;
+    setVisibility(request: VisibilityRequest, signal?: AbortSignal): Promise<RemoteResult<{
+        revision: number;
+    }>>;
+    setLevel(request: LevelRequest, signal?: AbortSignal): Promise<RemoteResult<{
+        revision: number;
+    }>>;
     forget(request: FactRequest, signal?: AbortSignal): Promise<RemoteResult<{
         revision: number;
     }>>;

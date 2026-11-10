@@ -1,6 +1,7 @@
 import { Context, Service } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import { type ConfigInput, type DreamingConfig } from './config.ts';
+import { type MemoryLevel } from './core/index.ts';
 export { Config } from './config.ts';
 export type { DreamingConfig, ConfigInput } from './config.ts';
 declare module '@deepseek-ai/cordis' {
@@ -58,7 +59,7 @@ export declare class DreamingService extends Service {
     }>>, "plain">;
     readonly config: DreamingConfig;
     private readonly projects;
-    private readonly agentProjects;
+    private readonly agentIndexes;
     private readonly lifecycle;
     private readonly operations;
     private readonly lastRuns;
@@ -99,23 +100,8 @@ export declare class DreamingService extends Service {
     listProjects(): string[];
     /** A consistent current revision and its bounded notes, including retired notes. */
     snapshot(projectRoot: string): Promise<{
-        memories: {
-            id: string;
-            title: string;
-            content: string;
-            category: "procedure" | "decision" | "preference" | "fact" | "pitfall";
-            status: "supported" | "uncertain" | "stale";
-            sources: {
-                sessionId: string;
-                seq: number;
-                quote: string;
-                observedAt: string;
-                kind: "user" | "assistant" | "tool";
-            }[];
-            createdAt: string;
-            updatedAt: string;
-            retiredReason?: string | undefined;
-        }[];
+        memories: import("./core/types.ts").VisibleFact[];
+        hiddenMemoryIds: string[];
         projectRoot: string;
         storageDirectory: string;
         revision: number;
@@ -132,47 +118,23 @@ export declare class DreamingService extends Service {
     }>;
     private describe;
     /** Search current supported and uncertain observations within one project. */
-    search(projectRoot: string, query: string, limit?: number): Promise<{
-        id: string;
-        title: string;
-        content: string;
-        category: "procedure" | "decision" | "preference" | "fact" | "pitfall";
-        status: "supported" | "uncertain" | "stale";
-        sources: {
-            sessionId: string;
-            seq: number;
-            quote: string;
-            observedAt: string;
-            kind: "user" | "assistant" | "tool";
-        }[];
-        createdAt: string;
-        updatedAt: string;
-        retiredReason?: string | undefined;
-    }[]>;
+    search(projectRoot: string, query: string, limit?: number): Promise<import("./core/types.ts").VisibleFact[]>;
     /** Read a fact with exact source citations, including stale records. */
-    read(projectRoot: string, id: string): Promise<{
-        id: string;
-        title: string;
-        content: string;
-        category: "procedure" | "decision" | "preference" | "fact" | "pitfall";
-        status: "supported" | "uncertain" | "stale";
-        sources: {
-            sessionId: string;
-            seq: number;
-            quote: string;
-            observedAt: string;
-            kind: "user" | "assistant" | "tool";
-        }[];
-        createdAt: string;
-        updatedAt: string;
-        retiredReason?: string | undefined;
-    }>;
+    read(projectRoot: string, id: string): Promise<import("./core/types.ts").VisibleFact>;
     /** Restore a previous revision as a new revision, preserving the audit trail. */
     rollback(projectRoot: string, revision: number, signal?: AbortSignal): Promise<{
         revision: number;
     }>;
     /** Remove a fact from current memory; revision history remains available. */
     forget(projectRoot: string, id: string, signal?: AbortSignal): Promise<{
+        revision: number;
+    }>;
+    private view;
+    /** Owner-only Web operation. An inherited ID can be paused in the receiving project. */
+    setVisibility(projectRoot: string, id: string, visible: boolean, expectedRevision: number, signal?: AbortSignal): Promise<{
+        revision: number;
+    }>;
+    setLevel(projectRoot: string, id: string, level: MemoryLevel, expectedRevision?: number, signal?: AbortSignal): Promise<{
         revision: number;
     }>;
     private project;

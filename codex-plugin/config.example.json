@@ -1,0 +1,9 @@
+{
+  "projectRoots": [],
+  "autoRun": false,
+  "autoRunIntervalSeconds": 30,
+  "verify": true,
+  "model": {
+    "backend": "codex"
+  }
+}

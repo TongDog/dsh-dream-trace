@@ -1,4 +1,4 @@
-import { type MemoryState } from './types.ts';
+import { type MemoryLevel, type MemoryState, type VisibleFact } from './types.ts';
 /** One store belongs to exactly one canonical project. Reads see either entire revision. */
 export declare class MemoryStore {
     readonly directory: string;
@@ -7,7 +7,12 @@ export declare class MemoryStore {
     private empty;
     private path;
     private loadRevision;
+    private pointer;
     private current;
+    private sharedCache?;
+    /** Only re-read an enabled sibling's revision when its current pointer changes. */
+    sharedFacts(): Promise<VisibleFact[]>;
+    setLevel(id: string, level: MemoryLevel, expectedRevision: number | undefined, signal?: AbortSignal): Promise<MemoryState>;
     /** @returns The current immutable snapshot, or empty state before the first commit. */
     read(): Promise<MemoryState>;
     private atomicWrite;

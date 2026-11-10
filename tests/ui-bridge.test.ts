@@ -39,7 +39,7 @@ function failure(result: RemoteResult<unknown>, code: string) {
 }
 function fact(id: string, status: MemoryFact['status'] = 'supported'): MemoryFact {
   const time = '2026-01-01T00:00:00.000Z'
-  return { id, title: `Test command ${id}`, content: 'Run npm test in this project.', category: 'procedure', status,
+  return { id, level: 4, title: `Test command ${id}`, content: 'Run npm test in this project.', category: 'procedure', status,
     createdAt: time, updatedAt: time,
     sources: [{ sessionId: 'original-conversation', seq: 4, quote: 'Run npm test in this project.', kind: 'user', observedAt: time }],
     ...(status === 'stale' ? { retiredReason: 'Superseded by a later command.' } : {}),
@@ -127,10 +127,12 @@ test('the bridge rejects guest users, path substitution, unknown fields, and mal
   try {
     const ui = f.client.remote.dreamingUi
     f.host.remoteAccess.registerPolicy('dreaming-test-guest', { bindings: () => [{
-      resource: { kind: 'global' }, role: { name: 'test-broad-grant', resource: 'global', actions: ['dreamingUi/projects', 'dreamingUi/snapshot', 'dreamingUi/forget'] },
+      resource: { kind: 'global' }, role: { name: 'test-broad-grant', resource: 'global', actions: ['dreamingUi/projects', 'dreamingUi/snapshot', 'dreamingUi/forget', 'dreamingUi/setLevel', 'dreamingUi/setVisibility'] },
     }] })
     f.setPeer({ kind: 'dreaming-test-guest' })
     failure(await ui.projects(), 'dreaming/forbidden')
+    failure(await ui.setVisibility({ projectRoot: f.projectRoot, id: 'first', visible: false, expectedRevision: 1 }), 'dreaming/forbidden')
+    failure(await ui.setLevel({ projectRoot: f.projectRoot, id: 'first', level: 1, expectedRevision: 1 }), 'dreaming/forbidden')
     failure(await ui.snapshot({ projectRoot: f.projectRoot }), 'dreaming/forbidden')
     failure(await ui.forget({ projectRoot: f.projectRoot, id: 'first' }), 'dreaming/forbidden')
     f.setPeer({ kind: 'owner' })
@@ -243,4 +245,61 @@ test('the actual Client factory activates under a plugin fiber with declared dyn
     await mounted.dispose()
     assert.equal(ctx.typert.remotes.get('dreamingUi/projects'), undefined)
   } finally { await ctx.fiber.dispose() }
+})
+
+test('level changes through the UI and dsh tools share only the approved record across enabled projects', async () => {
+  const f = await fixture()
+  try {
+    const ui = f.client.remote.dreamingUi
+    const request = { projectRoot: f.projectRoot, id: 'first', level: 1 as const, expectedRevision: 1 }
+    assert.equal((await ui.setLevel(request)).ok, true)
+    const other = { projectRoot: f.secondRoot }
+    const visible = value(await ui.snapshot(other)).memories
+    assert.equal(visible.length, 1)
+    const shared = visible[0]
+    assert.equal(shared.level, 1)
+    assert.deepEqual(shared.sources, [])
+    assert.doesNotMatch(JSON.stringify(visible), /original-conversation|Test command second/)
+    assert.deepEqual(value(await ui.read({ ...other, id: shared.id })), shared)
+    assert.deepEqual(value(await ui.search({ ...other, query: 'npm' })), visible)
+    failure(await ui.forget({ ...other, id: shared.id }), 'dreaming/operation-failed')
+    assert.equal((await f.tool('memory_set_level', { id: 'first', level: 5 })).isError, false)
+    assert.deepEqual(value(await ui.snapshot(other)).memories, [])
+    assert.equal(value(await ui.read({ projectRoot: f.projectRoot, id: 'first' })).level, 5)
+  } finally { await f.close() }
+})
+
+test('owner visibility pauses and restores recall while preserving management records and project scope', async () => {
+  const f = await fixture()
+  try {
+    const ui = f.client.remote.dreamingUi
+    const source = { projectRoot: f.projectRoot }
+    const receiver = { projectRoot: f.secondRoot }
+    const id = 'first'
+    value(await ui.setLevel({ ...source, id, level: 1, expectedRevision: 1 }))
+    const shared = value(await ui.snapshot(receiver)).memories[0]
+    const setLocal = (visible: boolean, expectedRevision: number) => ui.setVisibility({ ...source, id, visible, expectedRevision })
+
+    value(await ui.setVisibility({ ...receiver, id: shared.id, visible: false, expectedRevision: 0 }))
+    assert.deepEqual(value(await ui.search({ ...receiver, query: 'first' })), [])
+    assert.equal(value(await ui.snapshot(receiver)).memories[0].id, shared.id)
+    assert.equal((await f.tool('memory_read', { id })).isError, false)
+    value(await setLocal(false, 2))
+    const paused = value(await ui.snapshot(source))
+    assert.deepEqual(paused.hiddenMemoryIds, [id])
+    assert.equal(paused.memories.find(row => row.id === id)?.sources[0].sessionId, 'original-conversation')
+    assert.equal((await f.tool('memory_read', { id })).isError, true)
+    assert.deepEqual((await f.tool('memory_search', { query: 'first' })).value, [])
+    assert.deepEqual(value(await ui.snapshot(receiver)).memories, [])
+    failure(await setLocal(true, 2), 'dreaming/operation-failed')
+    assert.equal(value(await setLocal(false, 3)).revision, 3)
+    value(await ui.rollback({ ...source, revision: 2 }))
+    assert.equal((await f.tool('memory_read', { id })).isError, true)
+    value(await setLocal(true, 4))
+    const restored = await f.tool('memory_read', { id })
+    assert.equal(restored.isError, false)
+    assert.deepEqual(value(await ui.snapshot(receiver)).hiddenMemoryIds, [shared.id])
+    value(await ui.setVisibility({ ...receiver, id: shared.id, visible: true, expectedRevision: 1 }))
+    assert.deepEqual(value(await ui.read({ ...receiver, id: shared.id })), shared)
+  } finally { await f.close() }
 })

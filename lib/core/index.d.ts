@@ -3,19 +3,23 @@ export * from './types.ts';
 export * from './store.ts';
 export * from './engine.ts';
 export * from './security.ts';
-import { type MemoryFact, type MemoryState } from './types.ts';
+import { MemoryStore } from './store.ts';
+import { type VisibleFact } from './types.ts';
+export interface RecallView {
+    revision: number;
+    facts: VisibleFact[];
+    hiddenMemoryIds?: string[];
+}
+/** Compose only for recall. Consolidation, history and mutations always use the source store. */
+export declare function recallView(store: MemoryStore, enabled: Iterable<MemoryStore>): Promise<RecallView>;
 /** @param state Current memory. @param id Fact identifier. @returns A detached fact. */
-export declare function readMemory(state: MemoryState, id: string): MemoryFact;
+export declare function readMemory(state: RecallView, id: string): VisibleFact;
 /** Literal keyword search, including Chinese substrings; stale entries are excluded.
  * @param state Current memory.
  * @param query Keywords, or empty text to list current entries.
  * @param limit Maximum returned facts.
- * @returns Detached facts ordered by keyword matches and update time.
+ * @returns Detached facts ordered by matches, level, confidence and recency.
  */
-export declare function searchMemory(state: MemoryState, query: string, limit: number): MemoryFact[];
-/** Render a bounded index as data, not instructions; no fact content is injected.
- * @param state Current memory.
- * @param maxChars Maximum index length.
- * @returns A complete line-delimited index fitting maxChars, or empty text.
- */
-export declare function renderIndex(state: MemoryState, maxChars: number): string;
+export declare function searchMemory(state: RecallView, query: string, limit: number): VisibleFact[];
+/** Preload short, supported L1–L3 conclusions, index L4, and keep L5 searchable. */
+export declare function renderIndex(state: RecallView, maxChars: number): string;

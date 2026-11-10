@@ -2,6 +2,8 @@
 
 [中文主页](README.md) · [中文使用说明](README.zh-CN.md)
 
+**Codex support:** [Dream Trace](codex-plugin/README.md) is a standalone Codex plugin using hooks for evidence capture and MCP for recall, consolidation and rollback. It shares the memory core and does not require Harness. Build its standalone archive with `npm run pack:codex`.
+
 An independent project-memory plugin for **DeepSeek Harness 0.2.2-rc.1**, requiring **Node.js >=24.9.0**. Consolidates completed conversations into evidence-linked observations, corrects outdated notes, injects a bounded index into later sessions, and supports rollback. Version **0.2.0** adds a **Memory** page in the dsh Web sidebar for browsing and managing those records. It is not an official DeepSeek or Anthropic product.
 
 [Install](#install-and-enable) · [Memory page](#memory-page) · [Operations](#operations) · [Architecture](#architecture) · [Configuration](#configuration) · [Development](#development-and-verification)
@@ -14,7 +16,7 @@ Build and install a tarball from this repository:
 npm ci
 npm run check
 npm pack
-dsh plugin --profile web add /absolute/path/dsh-plugin-dreaming-0.2.0.tgz
+dsh plugin --profile web add /absolute/path/dsh-plugin-dreaming-0.3.1.tgz
 ```
 
 The bundle starts with an empty allowlist. Create a workspace overlay `dreaming.patch.yml`:
@@ -45,12 +47,13 @@ Open **Memory** in the dsh Web sidebar, then select an enabled project. The page
 - The four counters show active memories, supported memories, uncertain memories (**Needs review**), and the current revision. Active includes supported and uncertain records, excluding retired ones.
 - Search titles, contents, and source quotations. Filter by procedure, decision, preference, fact, or pitfall, and by active, supported, uncertain, or retired status. The default view excludes retired records; select **Retired** or **All statuses** to inspect them.
 - Select a record to read its full content, creation/update times, evidence quotations, source kind, observation time, session ID, and event sequence. These identifiers locate the original evidence; the page does not open the original conversation automatically.
+- Toggle **Allow agent recall** in the detail pane. Paused records remain available under **Paused only**. Pausing a shared record at its source affects all receiving projects. A receiving project can also pause its own copy.
 - Use **Run Dreaming** after completing work in the selected project. The page shows the operation result and reloads the current revision. **Refresh** fetches a fresh snapshot, including changes made through tools or background runs.
 - **Remove memory** asks for confirmation before removing a current record. **Version history → Restore** asks for confirmation and restores the selected facts and processing cursors as a new revision. Both actions retain older revisions and source conversations.
 
 An empty project list means `projectRoots` has not been configured. An enabled project with no records needs a completed conversation followed by a Dreaming run. The page displays operation failures without claiming that an update succeeded. Memory text is rendered as text, not executable markup.
 
-The Web management API is restricted to the authenticated Harness owner; shared-session guests cannot enumerate projects or read or change memory through it. Project selection is limited to exact configured roots. The Web bridge is optional: headless and terminal profiles retain the same six tools and background processing without a sidebar or API gateway.
+The Web management API is restricted to the authenticated Harness owner; shared-session guests cannot enumerate projects or read or change memory through it. Project selection is limited to exact configured roots. The Web bridge is optional: headless and terminal profiles retain the same seven tools and background processing without a sidebar or API gateway.
 
 ## Operations
 
@@ -60,6 +63,7 @@ The Web management API is restricted to the authenticated Harness owner; shared-
 | `dream_status` | Inspect memory version, recent error, active run and rollback revisions |
 | `memory_search` | Literal keyword and Chinese substring search with citations |
 | `memory_read` | Read one observation, status and original evidence |
+| `memory_set_level` | Set L1–L5 in the source project. Sharing at L1 requires the current source revision. |
 | `memory_forget` | Remove a current observation while retaining historical versions |
 | `dream_rollback` | Restore facts and processing cursors as a new revision |
 
@@ -80,7 +84,7 @@ The plugin separates a **dsh adapter layer**, a **memory core**, and an **option
 | [src/worker.ts](src/worker.ts) | A single-response, tool-free Agent session with durable input/output logs |
 | [src/core/store.ts](src/core/store.ts) | Cross-process writer locks, checksummed revisions, atomic publication, and recovery |
 | [src/core/index.ts](src/core/index.ts) | Keyword search, record lookup, and bounded index rendering |
-| [src/tools.ts](src/tools.ts) | Six agent tools scoped to the caller's current project |
+| [src/tools.ts](src/tools.ts) | Seven agent tools scoped to the caller's current project |
 | [src/ui-bridge.ts](src/ui-bridge.ts) / [src/ui-protocol.ts](src/ui-protocol.ts) | Optional owner-only Remote service and shared strict request/result codecs |
 | [client/source.js](client/source.js) / [locale/](locale/) | React panel, snapshot filtering, evidence details, and bilingual labels |
 
@@ -92,7 +96,7 @@ Writes have two guards: service-level exclusion for `run`, `forget`, and `rollba
 
 The plugin reads original DSH events, removes inherited fork history and injected context, excludes subagent/worker sessions and its own tool output, redacts recognizable credentials, and supplies bounded evidence to a model-only worker. Workers use the production Agent loop, retain replayable inputs and outputs, have no executable tools even under a PTC caller, and use ordinary DSH event types. Exact source quotes are checked before a separate semantic review. Only a successful run atomically publishes both memory and processing cursors.
 
-Each canonical project has its own directory under `storageDirectory`, identified by a SHA-256 hash of its path. Immutable JSON revisions and a checksummed current pointer support recovery; a cross-process writer lock prevents concurrent overwrites. Sources record session id, event sequence, original quote, source kind and observation time. At `agent/pre-step`, the service reads the latest snapshot and contributes a bounded index through `systemPrompt.context`. The logged index contains IDs, titles, and statuses; detailed records are retrieved through tools. No secondary Markdown copy or Wiki is maintained in this version.
+Each canonical project has its own directory under `storageDirectory`, identified by a SHA-256 hash of its path. Immutable JSON revisions and a checksummed current pointer support recovery; a cross-process writer lock prevents concurrent overwrites. Sources record session id, event sequence, original quote, source kind and observation time. At `agent/pre-step`, the service reads the latest snapshot and contributes a bounded index through `systemPrompt.context`. The logged index prioritizes short supported conclusions for L1 (explicitly shared defaults), L2 (project settings/preferences) and L3 (critical lessons). L4 shows titles, L5 is retrieved on demand. Existing records default to L4. The Memory page lets you filter and change levels. All enabled projects can recall L1 conclusions, while source quotes remain in the originating project. No secondary Markdown copy or Wiki is maintained in this version.
 
 Forgetting preserves processing cursors; rollback restores the selected revision's facts and cursors as a new revision, so later history may be processed again. `COMMIT_UNKNOWN` means publication may have succeeded before a durability or cleanup failure. Refresh the snapshot or call `dream_status` before deciding to retry. The same state check is appropriate after an interrupted write response.
 

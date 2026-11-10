@@ -3,3 +3,5 @@ coverage/
 *.tgz
 .env
 .DS_Store
+codex-plugin/dist/
+codex-plugin/LICENSE

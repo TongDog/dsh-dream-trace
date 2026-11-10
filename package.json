@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-dreaming",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "Evidence-linked background memory consolidation for DeepSeek Harness",
   "type": "module",
   "license": "MIT",
@@ -54,7 +54,9 @@
     "cordis"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/build-client.mjs",
+    "build": "tsc -p tsconfig.build.json && node scripts/build-client.mjs && npm run build:codex",
+    "build:codex": "node scripts/build-codex.mjs",
+    "pack:codex": "npm run build:codex && npm pack ./codex-plugin",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
     "check": "npm run typecheck && npm test && npm run build",
@@ -104,6 +106,7 @@
     "@deepseek-ai/dsh-typert-registry": "0.2.2-rc.1",
     "@deepseek-ai/dsh-api-gateway": "0.2.2-rc.1",
     "@deepseek-ai/dsh-api-remote-access": "0.2.2-rc.1",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "@modelcontextprotocol/sdk": "^1.32.2"
   }
 }

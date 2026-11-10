@@ -7,7 +7,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-session-query'
 import type {} from '@deepseek-ai/dsh-working-directory'
 import { Config, configSchema, type ConfigInput, type DreamingConfig } from './config.ts'
-import { CoreError, DreamEngine, MemoryStore, evidenceBudget, readMemory, renderIndex, searchMemory, type MemoryState } from './core/index.ts'
+import { CoreError, DreamEngine, MemoryStore, evidenceBudget, readMemory, recallView, renderIndex, searchMemory, type MemoryLevel, type RecallView } from './core/index.ts'
 import { collectTranscripts } from './transcripts.ts'
 import { generateInSession } from './worker.ts'
 import { registerTools } from './tools.ts'
@@ -20,7 +20,7 @@ declare module '@deepseek-ai/cordis' {
   interface Context { dreaming: DreamingService }
 }
 
-interface Project { root: string; store: MemoryStore; state: MemoryState }
+interface Project { root: string; store: MemoryStore }
 export interface LastRun { at: string; error: string | null }
 
 /** Match a canonical path without accepting sibling-prefix matches. */
@@ -35,7 +35,7 @@ export class DreamingService extends Service {
   static Config = Config
   readonly config: DreamingConfig
   private readonly projects = new Map<string, Project>()
-  private readonly agentProjects = new WeakMap<Agent, Project>()
+  private readonly agentIndexes = new WeakMap<Agent, string>()
   private readonly lifecycle = new AbortController()
   private readonly operations = new Map<string, Promise<unknown>>()
   private readonly lastRuns = new Map<string, LastRun>()
@@ -57,7 +57,8 @@ export class DreamingService extends Service {
       if (this.projects.has(root)) throw new Error('Dreaming projectRoots contains duplicate canonical directories.')
       const id = createHash('sha256').update(root).digest('hex')
       const store = new MemoryStore(join(this.config.storageDirectory, id), id)
-      this.projects.set(root, { root, store, state: await store.read() })
+      await store.read()
+      this.projects.set(root, { root, store })
     }
     const ctx = this.ctx
     ctx.effect(() => async () => {
@@ -68,12 +69,12 @@ export class DreamingService extends Service {
     })
     ctx.on('agent/pre-step', async ({ agent, signal }, next) => {
       if (!this.isWorker(agent)) {
-        this.agentProjects.delete(agent)
+        this.agentIndexes.delete(agent)
         const project = await this.projectForDirectory(ctx.workingDirectory.get(agent.session))
         if (project) {
           signal.throwIfAborted()
-          project.state = await project.store.read()
-          this.agentProjects.set(agent, project)
+          const view = await this.view(project)
+          this.agentIndexes.set(agent, renderIndex(view, this.config.maxIndexChars))
         }
       }
       return next()
@@ -82,8 +83,7 @@ export class DreamingService extends Service {
       name: 'dreaming:memory-index', order: 900, interpolate: false,
       text: ({ agent }) => {
         if (!agent || this.isWorker(agent)) return ''
-        const project = this.agentProjects.get(agent)
-        return project ? renderIndex(project.state, this.config.maxIndexChars) : ''
+        return this.agentIndexes.get(agent) ?? ''
       },
     })
     registerTools(ctx, this)
@@ -141,7 +141,6 @@ export class DreamingService extends Service {
       const engine = new DreamEngine(project.store, engineConfig, (system, payload, innerSignal) =>
         generateInSession(this.ctx, this.config, project.root, system, payload, innerSignal ?? control))
       const result = await engine.run(selected.batches, control)
-      project.state = await project.store.read()
       return { ...result, sessionsRead: selected.sessionsRead, eventsSelected: selected.eventsSelected, deferred: selected.deferred }
     })
   }
@@ -159,14 +158,14 @@ export class DreamingService extends Service {
   /** A consistent current revision and its bounded notes, including retired notes. */
   async snapshot(projectRoot: string) {
     const project = this.project(projectRoot)
-    const state = await project.store.read()
-    return { ...await this.describe(project, state), memories: state.facts }
+    const state = await this.view(project)
+    return { ...await this.describe(project, state), memories: state.facts, hiddenMemoryIds: state.hiddenMemoryIds ?? [] }
   }
 
-  private async describe(project: Project, state: MemoryState) {
+  private async describe(project: Project, state: RecallView) {
     const projectRoot = project.root
     return { projectRoot, storageDirectory: project.store.directory, revision: state.revision,
-      facts: state.facts.filter(fact => fact.status !== 'stale').length,
+      facts: state.facts.filter(fact => !fact.inherited && fact.status !== 'stale').length,
       running: this.operations.has(projectRoot), lastRun: this.lastRuns.get(projectRoot) ?? null,
       revisions: await project.store.revisions(), autoRunAfterTurn: this.config.autoRunAfterTurn,
       autoRunIntervalMinutes: this.config.autoRunIntervalMinutes }
@@ -175,25 +174,55 @@ export class DreamingService extends Service {
   /** Search current supported and uncertain observations within one project. */
   async search(projectRoot: string, query: string, limit = this.config.searchLimit) {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > this.config.searchLimit) throw new Error(`limit must be between 1 and ${this.config.searchLimit}`)
-    return searchMemory(await this.project(projectRoot).store.read(), query, limit)
+    return searchMemory(await this.view(this.project(projectRoot)), query, limit)
   }
 
   /** Read a fact with exact source citations, including stale records. */
-  async read(projectRoot: string, id: string) { return readMemory(await this.project(projectRoot).store.read(), id) }
+  async read(projectRoot: string, id: string) { return readMemory(await this.view(this.project(projectRoot)), id) }
 
   /** Restore a previous revision as a new revision, preserving the audit trail. */
   async rollback(projectRoot: string, revision: number, signal?: AbortSignal) {
     return this.exclusive(projectRoot, signal, async (project, control) => {
-      project.state = await project.store.rollback(revision, control)
-      return { revision: project.state.revision }
+      const state = await project.store.rollback(revision, control)
+      return { revision: state.revision }
     })
   }
 
   /** Remove a fact from current memory; revision history remains available. */
   async forget(projectRoot: string, id: string, signal?: AbortSignal) {
     return this.exclusive(projectRoot, signal, async (project, control) => {
-      project.state = await project.store.forget(id, control)
-      return { revision: project.state.revision }
+      const state = await project.store.forget(id, control)
+      return { revision: state.revision }
+    })
+  }
+
+  private view(project: Project) {
+    return recallView(project.store, [...this.projects.values()].map(item => item.store))
+  }
+
+  /** Owner-only Web operation. An inherited ID can be paused in the receiving project. */
+  async setVisibility(projectRoot: string, id: string, visible: boolean, expectedRevision: number, signal?: AbortSignal) {
+    return this.exclusive(projectRoot, signal, async (project, control) => {
+      const state = await project.store.transact(async current => {
+        if (current.revision !== expectedRevision) throw new Error('Memory changed; refresh the project and retry.')
+        if (!current.facts.some(fact => fact.id === id)) {
+          const view = await this.view(project)
+          if (!view.facts.some(fact => fact.inherited && fact.id === id)) throw new CoreError('NOT_FOUND', 'Memory is no longer available in this project.')
+        }
+        const hidden = new Set(current.hiddenMemoryIds)
+        if (hidden.has(id) === !visible) return null
+        if (visible) hidden.delete(id)
+        else hidden.add(id)
+        return { ...current, hiddenMemoryIds: hidden.size ? [...hidden] : undefined }
+      }, control)
+      return { revision: state.revision }
+    })
+  }
+
+  async setLevel(projectRoot: string, id: string, level: MemoryLevel, expectedRevision?: number, signal?: AbortSignal) {
+    return this.exclusive(projectRoot, signal, async (project, control) => {
+      const state = await project.store.setLevel(id, level, expectedRevision, control)
+      return { revision: state.revision }
     })
   }
 
