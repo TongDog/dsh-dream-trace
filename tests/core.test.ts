@@ -110,6 +110,84 @@ test('missing or nonverbatim evidence cannot create a memory or advance a cursor
   } finally { await f.cleanup() }
 })
 
+test('JSON-escaped citations are restored to verbatim evidence before review and persistence', async () => {
+  for (const command of ['echo "=== 112 test ==="', 'echo "第一行"\ncd C:\\work\\project\t']) {
+    const f = await fixture()
+    try {
+      const escaped = JSON.stringify(command).slice(1, -1)
+      const toolBatch: TranscriptBatch = { ...batch, events: [{ ...batch.events[0], kind: 'assistant', text: `Tool call: bash\nArguments: ${JSON.stringify({ command })}` }] }
+      const candidate: Proposal = { updates: [{ ...proposal.updates[0], status: 'uncertain', evidence: [{ ...citation, quote: command }] }], retire: [] }
+      let calls = 0
+      const engine = new DreamEngine(f.store, config, async (_system, payload) => {
+        if (++calls === 1) return JSON.stringify(candidate)
+        const review = JSON.parse(payload)
+        assert.equal(review.proposal.updates[0].evidence[0].quote, escaped)
+        assert.ok(review.events[0].text.includes(escaped))
+        return JSON.stringify({ approved: true, reason: 'Exact original tool arguments.' })
+      })
+      await engine.run([toolBatch])
+      assert.equal(calls, 2)
+      assert.deepEqual((await f.store.read()).facts[0].sources, [{ ...citation, quote: escaped, observedAt: batch.events[0].time, kind: 'assistant' }])
+    } finally { await f.cleanup() }
+  }
+})
+
+test('decoded citations can reuse historical JSON evidence without changing its source metadata', async () => {
+  const f = await fixture()
+  try {
+    const command = 'echo "=== 112 test ==="'
+    const escaped = JSON.stringify(command).slice(1, -1)
+    const toolBatch: TranscriptBatch = { ...batch, events: [{ ...batch.events[0], text: `Tool result: bash\n${JSON.stringify({ output: command })}` }] }
+    const candidate: Proposal = { updates: [{ ...proposal.updates[0], evidence: [{ ...citation, quote: escaped }] }], retire: [] }
+    await new DreamEngine(f.store, config, responses(candidate, { approved: true, reason: '' })).run([toolBatch])
+    const original = (await f.store.read()).facts[0]
+    const later: TranscriptBatch = { ...batch, throughSeq: 20, events: [{ ...batch.events[0], seq: 14, text: 'The previous command is still useful.' }] }
+    const update: Proposal = { updates: [{ ...candidate.updates[0], id: original.id, evidence: [{ ...citation, quote: command }] }], retire: [] }
+    let calls = 0
+    await new DreamEngine(f.store, config, async (_system, payload) => {
+      if (++calls === 1) return JSON.stringify(update)
+      assert.equal(JSON.parse(payload).proposal.updates[0].evidence[0].quote, escaped)
+      return JSON.stringify({ approved: true, reason: '' })
+    }).run([later])
+    assert.deepEqual((await f.store.read()).facts[0].sources, original.sources)
+  } finally { await f.cleanup() }
+})
+
+test('JSON citation repair still rejects altered text, wrong events, redactions and oversized quotes', async () => {
+  const command = 'echo "=== 112 test ==="'
+  for (const invalid of [
+    { ...citation, quote: 'echo "=== 113 test ==="' },
+    { ...citation, seq: 5, quote: command },
+    { ...citation, sessionId: 'another-session', quote: command },
+    { ...citation, quote: '[REDACTED]' },
+    { ...citation, quote: '"'.repeat(1100) },
+  ]) {
+    const f = await fixture()
+    try {
+      const toolBatch: TranscriptBatch = { ...batch, events: [{ ...batch.events[0], text: JSON.stringify({ command, redacted: '[REDACTED]', long: '"'.repeat(1100) }) }] }
+      const candidate: Proposal = { updates: [{ ...proposal.updates[0], evidence: [invalid] }], retire: [] }
+      await assert.rejects(new DreamEngine(f.store, config, responses(candidate)).run([toolBatch]), code('UNSUPPORTED_EVIDENCE'))
+      assert.equal((await f.store.read()).revision, 0)
+      assert.deepEqual((await f.store.read()).cursors, {})
+    } finally { await f.cleanup() }
+  }
+})
+
+test('restoring JSON escapes cannot exceed the proposal budget or bypass review', async () => {
+  const f = await fixture()
+  try {
+    const command = 'echo "=== 112 test ==="'
+    const toolBatch: TranscriptBatch = { ...batch, events: [{ ...batch.events[0], text: JSON.stringify({ command }) }] }
+    const candidate: Proposal = { updates: [{ ...proposal.updates[0], evidence: [{ ...citation, quote: command }] }], retire: [] }
+    const bounded = { ...config, maxProposalChars: JSON.stringify(candidate).length }
+    await assert.rejects(new DreamEngine(f.store, bounded, responses(candidate)).run([toolBatch]), code('INVALID_PROPOSAL'))
+    assert.equal((await f.store.read()).revision, 0)
+    assert.deepEqual((await f.store.read()).cursors, {})
+    await assert.rejects(new DreamEngine(f.store, config, responses(candidate, { approved: false, reason: 'Unsupported interpretation.' })).run([toolBatch]), code('REVIEW_REJECTED'))
+    assert.equal((await f.store.read()).revision, 0)
+  } finally { await f.cleanup() }
+})
+
 test('assistant-only assertions stay uncertain instead of becoming supported facts', async () => {
   const f = await fixture()
   try {
