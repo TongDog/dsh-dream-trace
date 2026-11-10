@@ -24,7 +24,7 @@ for (const name of [...packages].sort()) {
   const directory = join(root, 'node_modules', name)
   const pkg = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8'))
   let license = ''
-  for (const candidate of ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'license', 'license.md']) {
+  for (const candidate of ['LICENSE', 'License', 'LICENSE.md', 'LICENSE.txt', 'license', 'license.md']) {
     try { license = await readFile(join(directory, candidate), 'utf8'); break } catch (error) { if (error.code !== 'ENOENT') throw error }
   }
   if (!license) throw new Error(`Missing bundled license for ${name}`)
