@@ -4,8 +4,9 @@ export * from './store.ts';
 export * from './engine.ts';
 export * from './security.ts';
 import { MemoryStore } from './store.ts';
-import { type VisibleFact } from './types.ts';
+import { type WikiPage, type VisibleFact } from './types.ts';
 export interface RecallView {
+    wiki?: WikiPage[];
     revision: number;
     facts: VisibleFact[];
     hiddenMemoryIds?: string[];

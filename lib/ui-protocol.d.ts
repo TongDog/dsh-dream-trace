@@ -65,6 +65,12 @@ declare const snapshotResult: z.ZodObject<{
     }, z.core.$strict>>;
     autoRunAfterTurn: z.ZodBoolean;
     autoRunIntervalMinutes: z.ZodNumber;
+    wiki: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        title: z.ZodString;
+        sourceIds: z.ZodArray<z.ZodString>;
+        links: z.ZodArray<z.ZodString>;
+    }, z.core.$strict>>>;
     memories: z.ZodArray<z.ZodUnion<readonly [z.ZodObject<{
         id: z.ZodString;
         title: z.ZodString;
@@ -145,6 +151,9 @@ export interface DreamingUiRemote {
     status(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<MemoryStatus>>;
     search(request: SearchRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>[]>>;
     read(request: FactRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>>>;
+    organizeWiki(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<{
+        revision: number;
+    }>>;
     run(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<DreamingRunResult>>;
     setVisibility(request: VisibilityRequest, signal?: AbortSignal): Promise<RemoteResult<{
         revision: number;

@@ -4,6 +4,14 @@
     "description": "复盘已完成的工作，依据会话记录修正项目记忆，并在后续会话中提取有用经验。"
   },
   "ui": {
+    "wiki": "Wiki",
+    "wikiGenerate": "生成主题页",
+    "wikiContinue": "继续整理",
+    "wikiSource": "查看来源",
+    "wikiRelated": "相关主题",
+    "wikiEmpty": "暂无主题页",
+    "wikiHint": "先复盘获得有证据的项目记忆，再生成主题页。",
+    "wikiDone": "Wiki 整理完成",
     "panel": "记忆",
     "subtitle": "浏览智能体积累的项目经验，查看每条记忆背后的依据。",
     "refresh": "刷新",

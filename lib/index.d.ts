@@ -80,6 +80,9 @@ export declare class DreamingService extends Service {
         retired: number;
         unchanged: boolean;
     }>;
+    organizeWiki(projectRoot: string, signal?: AbortSignal): Promise<{
+        revision: number;
+    }>;
     /** Current revision, recent failures and available rollback targets. */
     status(projectRoot: string): Promise<{
         projectRoot: string;
@@ -100,6 +103,12 @@ export declare class DreamingService extends Service {
     listProjects(): string[];
     /** A consistent current revision and its bounded notes, including retired notes. */
     snapshot(projectRoot: string): Promise<{
+        wiki: {
+            links: string[];
+            sourceIds: string[];
+            id: string;
+            title: string;
+        }[];
         memories: import("./core/types.ts").VisibleFact[];
         hiddenMemoryIds: string[];
         projectRoot: string;

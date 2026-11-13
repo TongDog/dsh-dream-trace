@@ -57,6 +57,7 @@ window.__ModuleLoader__.load({
       const [levelFilter, setLevelFilter] = useState(0);
       const [category, setCategory] = useState('all');
       const [status, setStatus] = useState('active');
+      const [pageId, setPageId] = useState('');
       const [tab, setTab] = useState('memories');
       const [loading, setLoading] = useState(false);
       const [busy, setBusy] = useState(false);
@@ -113,6 +114,7 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         ++version.current;
         setSnapshot(null);
+        setPageId('');
         setSelected('');
         setConfirmation(null);
         setNotice(null);
@@ -155,6 +157,12 @@ window.__ModuleLoader__.load({
       const hidden = new Set(snapshot?.hiddenMemoryIds);
       const filtered = all.filter(f => (!pausedOnly || hidden.has(f.id)) && (!levelFilter || f.level === levelFilter) && (category === 'all' || f.category === category) && (status === 'all' || status === 'active' ? status === 'all' || f.status !== 'stale' : f.status === status) && (!query.trim() || `${f.title}\n${f.summary || ''}\n${f.content}\n${f.sources.map(s => s.quote).join('\n')}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))).sort((a,b) => a.level - b.level || b.updatedAt.localeCompare(a.updatedAt));
       const fact = filtered.find(f => f.id === selected) || filtered[0];
+      const pages = snapshot?.wiki || [];
+      const page = pages.find(item => item.id === pageId) || pages[0];
+      function openSource(id) {
+        setQuery(''); setLevelFilter(0); setPausedOnly(false); setCategory('all'); setStatus('all');
+        setSelected(id); setTab('memories');
+      }
       const summary = fact && summaryOf(fact);
       const locked = busy || loading || snapshot?.running || Boolean(error);
       const renderConfirm = () => confirmation && h('div', { className: 'dreaming-confirm', role: 'alert' },
@@ -169,14 +177,14 @@ window.__ModuleLoader__.load({
         error && h('div', { role: 'alert', className: 'dreaming-message dreaming-error' }, error),
         notice && h('div', { role: 'status', className: 'dreaming-message' }, notice.method === 'run'
           ? `${t('dreamDone')} ${t('created')}: ${notice.value.created} · ${t('updated')}: ${notice.value.updated} · ${t('retired')}: ${notice.value.retired}${notice.value.unchanged ? ` · ${t('unchanged')}` : ''}`
-          : `${t(notice.method === 'setVisibility' ? 'visibilitySaved' : notice.method === 'setLevel' ? 'levelChanged' : notice.method === 'forget' ? 'forgotten' : 'rolledBack')} #${notice.value.revision}`),
+          : `${t(notice.method === 'organizeWiki' ? 'wikiDone' : notice.method === 'setVisibility' ? 'visibilitySaved' : notice.method === 'setLevel' ? 'levelChanged' : notice.method === 'forget' ? 'forgotten' : 'rolledBack')} #${notice.value.revision}`),
         projects === null && !error && h('p', { role: 'status', className: 'dreaming-muted' }, t('loading')),
         projects?.length === 0 && empty(t('noProjects'), t('configureProjects')),
         projects?.length > 0 && h('label', { className: 'dreaming-field dreaming-project' }, h('span', { className: 'dreaming-small dreaming-muted' }, t('project')), h('select', { className: 'dreaming-select', value: project, title: project, disabled: busy, onChange: e => setProject(e.target.value) }, projects.map(root => h('option', { key: root, value: root }, `${root.split(/[\\/]/).filter(Boolean).pop()} — ${root}`)))),
         snapshot && h(React.Fragment, null,
           h('div', { className: 'dreaming-stats' },
             ...[['activeCount', all.filter(f => f.status !== 'stale').length], ['supportedCount', all.filter(f => f.status === 'supported').length], ['uncertainCount', all.filter(f => f.status === 'uncertain').length], ['revision', `#${snapshot.revision}`]].map(([label, count]) => h('div', { className: 'dreaming-stat', key: label }, h('span', null, t(label)), h('strong', null, count)))),
-          h('div', { className: 'dreaming-tabs', 'aria-label': t('views') }, ...['memories', 'history'].map(value => h('button', { type: 'button', key: value, className: 'dreaming-tab', 'aria-pressed': tab === value, onClick: () => { setTab(value); setConfirmation(null); } }, t(value)))),
+          h('div', { className: 'dreaming-tabs', 'aria-label': t('views') }, ...['memories', 'wiki', 'history'].map(value => h('button', { type: 'button', key: value, className: 'dreaming-tab', 'aria-pressed': tab === value, onClick: () => { setTab(value); setConfirmation(null); } }, t(value)))),
           tab === 'memories' ? h('div', { className: 'dreaming-workspace' },
             h('div', null,
               h('div', { className: 'dreaming-filters' },
@@ -214,6 +222,19 @@ window.__ModuleLoader__.load({
                 h('blockquote', null, source.quote), h('code', null, `${source.sessionId} · #${source.seq}`))),
               h('div', { className: 'dreaming-detail-footer' }, h('span', { className: 'dreaming-small dreaming-muted' }, `${t('createdAt')} ${formatDate(fact.createdAt)}`), !fact.inherited && button(t('forget'), () => setConfirmation({ method: 'forget', args: { id: fact.id } }), { className: 'dreaming-button danger', disabled: locked })), confirmation?.method === 'forget' && confirmation.args.id === fact.id && renderConfirm())
               : empty(t('selectMemory'), t('selectMemoryBody')))
+            : tab === 'wiki' ? h('div', { className: 'dreaming-workspace' },
+              h('div', null,
+                button(t(page ? 'wikiContinue' : 'wikiGenerate'), () => void act('organizeWiki'), { disabled: locked || !all.some(f => !f.inherited && !hidden.has(f.id) && f.status === 'supported') }),
+                h('div', { className: 'dreaming-list' }, pages.map(item => button(item.title, () => setPageId(item.id), { key: item.id, 'aria-pressed': page?.id === item.id, className: 'dreaming-card' })))),
+              page ? h('article', { className: 'dreaming-detail' }, h('h2', null, page.title),
+                ...page.sourceIds.map(id => {
+                  const source = all.find(item => item.id === id);
+                  return source && h('section', { key: id }, h('h3', null, source.title), h('p', { className: 'dreaming-content' }, source.content),
+                    button(t('wikiSource'), () => openSource(id)));
+                }),
+                page.links.length > 0 && h('nav', { className: 'dreaming-actions', 'aria-label': t('wikiRelated') }, h('strong', null, t('wikiRelated')),
+                  ...page.links.map(id => button(pages.find(item => item.id === id).title, () => setPageId(id), { key: id }))))
+                : empty(t('wikiEmpty'), t('wikiHint')))
             : h('div', null, h('p', { className: 'dreaming-muted dreaming-caption' }, t('historyHint')), confirmation?.method === 'rollback' && renderConfirm(),
               !snapshot.revisions.length && empty(t('noHistory'), t('firstDream')), h('div', { className: 'dreaming-history' }, ...[...snapshot.revisions].sort((a,b) => b.revision - a.revision).map(rev => h('div', { key: rev.revision, className: 'dreaming-history-row' }, h('div', null, h('strong', null, `${t('revision')} #${rev.revision}`), rev.revision === snapshot.revision && h('span', { className: 'dreaming-badge', style: { marginLeft: 8 } }, t('current')), h('p', { className: 'dreaming-small dreaming-muted' }, `${formatDate(rev.createdAt)} · ${rev.facts} ${t('results')}`)), button(t('rollback'), () => setConfirmation({ method: 'rollback', args: { revision: rev.revision } }), { disabled: locked || rev.revision === snapshot.revision }))))),
           h('p', { className: 'dreaming-small dreaming-muted dreaming-caption' }, `${t('automation')}: ${snapshot.autoRunAfterTurn ? t('afterTurn') : snapshot.autoRunIntervalMinutes ? t('periodic') : t('manual')}${snapshot.autoRunIntervalMinutes ? ` · ${snapshot.autoRunIntervalMinutes} ${t('minutes')}` : ''} · ${t('lastOperation')}: ${formatDate(snapshot.lastRun?.at)}`),

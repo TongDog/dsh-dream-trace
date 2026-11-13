@@ -9,6 +9,7 @@ import type {} from '@deepseek-ai/dsh-working-directory'
 import { Config, configSchema, type ConfigInput, type DreamingConfig } from './config.ts'
 import { CoreError, DreamEngine, MemoryStore, evidenceBudget, readMemory, recallView, renderIndex, searchMemory, type MemoryLevel, type RecallView } from './core/index.ts'
 import { collectTranscripts } from './transcripts.ts'
+import { organizeWiki, visiblePages } from './core/wiki.ts'
 import { generateInSession } from './worker.ts'
 import { registerTools } from './tools.ts'
 import { registerUiBridge } from './ui-bridge.ts'
@@ -145,6 +146,14 @@ export class DreamingService extends Service {
     })
   }
 
+  async organizeWiki(projectRoot: string, signal?: AbortSignal) {
+    return this.exclusive(projectRoot, signal, async (project, control) => {
+      const state = await organizeWiki(project.store, this.config, (system, payload) =>
+        generateInSession(this.ctx, this.config, project.root, system, payload, control), control)
+      return { revision: state.revision }
+    })
+  }
+
   /** Current revision, recent failures and available rollback targets. */
   async status(projectRoot: string) {
     const project = this.project(projectRoot)
@@ -159,7 +168,7 @@ export class DreamingService extends Service {
   async snapshot(projectRoot: string) {
     const project = this.project(projectRoot)
     const state = await this.view(project)
-    return { ...await this.describe(project, state), memories: state.facts, hiddenMemoryIds: state.hiddenMemoryIds ?? [] }
+    return { ...await this.describe(project, state), wiki: visiblePages(state), memories: state.facts, hiddenMemoryIds: state.hiddenMemoryIds ?? [] }
   }
 
   private async describe(project: Project, state: RecallView) {

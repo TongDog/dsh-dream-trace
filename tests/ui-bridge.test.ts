@@ -306,3 +306,47 @@ test('owner visibility pauses and restores recall while preserving management re
     assert.deepEqual(value(await ui.read({ ...receiver, id: shared.id })), shared)
   } finally { await f.close() }
 })
+
+test('wiki pages use live sources, repair pending links without transcripts, and roll back together', async () => {
+  const f = await fixture()
+  try {
+    const { organizeWiki } = await import('../src/core/wiki.ts')
+    const limits = { maxInputChars: 60000, maxProposalChars: 12000 }
+    const root = { projectRoot: f.projectRoot }
+    const snapshot = async () => value(await f.client.remote.dreamingUi.snapshot(root))
+    const index = { id: 'testing', title: 'Test workflow', sourceIds: ['first'], links: ['commands', 'typo'] }
+    const commands = { id: 'commands', title: 'Test commands', sourceIds: ['second'], links: ['testing'] }
+    const first = await organizeWiki(f.store, limits, async () => JSON.stringify([index]))
+    assert.deepEqual((await snapshot()).wiki[0].links, [])
+    const second = await organizeWiki(f.store, limits, async (_, input) => {
+      assert.deepEqual(JSON.parse(input).missingLinks.map((item: { target: string }) => item.target), ['commands', 'typo'])
+      return JSON.stringify([commands])
+    })
+    assert.deepEqual(second.cursors, first.cursors)
+    assert.deepEqual((await snapshot()).wiki, [{ ...index, links: ['commands'] }, commands])
+    assert.equal((await organizeWiki(f.store, limits, async () => '[]')).revision, second.revision)
+    await assert.rejects(organizeWiki(f.store, limits, async () => JSON.stringify([{ ...index, sourceIds: ['retired'] }])))
+    await f.store.transact(async state => {
+      state.facts[0].content = 'Run pnpm test.'
+      state.facts[0].sources[0].quote = 'Run pnpm test.'
+      return state
+    })
+    const changed = await snapshot()
+    const source = changed.memories.find(fact => fact.id === changed.wiki[0].sourceIds[0])!
+    assert.equal(source.content, 'Run pnpm test.')
+    assert.equal(source.sources[0].quote, 'Run pnpm test.')
+    value(await f.client.remote.dreamingUi.forget({ ...root, id: 'first' }))
+    assert.deepEqual((await snapshot()).wiki, [{ ...commands, links: [] }])
+    const restored = value(await f.client.remote.dreamingUi.rollback({ ...root, revision: second.revision }))
+    const after = await snapshot()
+    assert.equal(after.revision, restored.revision)
+    assert.deepEqual(after.wiki, [{ ...index, links: ['commands'] }, commands])
+    assert.equal(after.memories.find(fact => fact.id === 'first')?.content, 'Run npm test in this project.')
+    assert.equal(value(await f.client.remote.dreamingUi.organizeWiki({ projectRoot: f.secondRoot })).revision, 0)
+    f.host.remoteAccess.registerPolicy('dreaming-test-guest', { bindings: () => [{
+      resource: { kind: 'global' }, role: { name: 'wiki-probe', resource: 'global', actions: ['dreamingUi/organizeWiki'] },
+    }] })
+    f.setPeer({ kind: 'dreaming-test-guest' })
+    failure(await f.client.remote.dreamingUi.organizeWiki(root), 'dreaming/forbidden')
+  } finally { await f.close() }
+})

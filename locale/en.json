@@ -4,6 +4,14 @@
     "description": "Review completed work, correct project memories against recorded evidence, and recall useful lessons in future sessions."
   },
   "ui": {
+    "wiki": "Wiki",
+    "wikiGenerate": "Generate topic pages",
+    "wikiContinue": "Continue organizing",
+    "wikiSource": "View source",
+    "wikiRelated": "Related topics",
+    "wikiEmpty": "No topic pages",
+    "wikiHint": "Consolidate supported project memories, then generate topic pages.",
+    "wikiDone": "Wiki organization complete",
     "panel": "Memory",
     "subtitle": "What your agent has learned — with the evidence behind every memory.",
     "refresh": "Refresh",

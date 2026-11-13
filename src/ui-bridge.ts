@@ -10,7 +10,7 @@ import {
   type FactRequest, type LevelRequest, type ProjectRequest, type RollbackRequest, type SearchRequest, type VisibilityRequest,
 } from './ui-protocol.ts'
 
-export type DreamingUiOperations = Pick<DreamingService, 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'setLevel' | 'setVisibility' | 'forget' | 'rollback'>
+export type DreamingUiOperations = Pick<DreamingService, 'organizeWiki' | 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'setLevel' | 'setVisibility' | 'forget' | 'rollback'>
 
 declare module '@deepseek-ai/cordis' {
   interface Context { dreamingUi: DreamingUiBridge }
@@ -50,6 +50,10 @@ export class DreamingUiBridge extends TypertRemoteService {
 
   read(request: FactRequest, signal: AbortSignal) {
     return this.scoped(factRequest, request, signal, input => this.operations.read(input.projectRoot, input.id))
+  }
+
+  organizeWiki(request: ProjectRequest, signal: AbortSignal) {
+    return this.scoped(projectRequest, request, signal, input => this.operations.organizeWiki(input.projectRoot, signal))
   }
 
   run(request: ProjectRequest, signal: AbortSignal) {

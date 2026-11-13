@@ -67,10 +67,16 @@ const cursorSchema = z.unknown().transform((value, context): Record<string, numb
   }
   return result
 })
+const pageKey = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/)
+export const wikiPageSchema = z.object({
+  id: pageKey, title: z.string().trim().min(1).max(160),
+  sourceIds: z.array(id).min(1).max(100), links: z.array(pageKey).max(100),
+}).strict()
+export type WikiPage = z.infer<typeof wikiPageSchema>
 export const stateSchema = z.object({
   schemaVersion: z.literal(1), projectId: id, revision: z.number().int().nonnegative(),
   parentRevision: z.number().int().nonnegative().nullable(), parentHash: z.string().regex(/^[a-f0-9]{64}$/).nullable(), createdAt: z.iso.datetime(),
-  facts: z.array(factSchema), cursors: cursorSchema, hiddenMemoryIds: z.array(id).optional(),
+  wiki: z.array(wikiPageSchema).max(200).optional(), facts: z.array(factSchema), cursors: cursorSchema, hiddenMemoryIds: z.array(id).optional(),
 }).strict()
 export type MemoryState = z.infer<typeof stateSchema>
 /** An observable event; private model reasoning must never be supplied. */

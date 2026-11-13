@@ -1,7 +1,7 @@
 /** Shared, browser-safe contracts for the existing Harness Remote carrier. */
 import { z } from 'zod'
 import type { RemoteResult, TypertCodec, TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol'
-import { levelSchema, visibleFactSchema } from './core/types.ts'
+import { levelSchema, visibleFactSchema, wikiPageSchema } from './core/types.ts'
 
 const count = z.number().int().nonnegative().safe()
 const root = z.string().min(1).max(4096)
@@ -19,7 +19,7 @@ const statusResult = z.object({
   revisions: z.array(z.object({ revision: count, createdAt: z.iso.datetime(), facts: count }).strict()),
   autoRunAfterTurn: z.boolean(), autoRunIntervalMinutes: count,
 }).strict()
-const snapshotResult = statusResult.extend({ memories: z.array(visibleFactSchema), hiddenMemoryIds: z.array(id).default([]) }).strict()
+const snapshotResult = statusResult.extend({ wiki: z.array(wikiPageSchema).default([]), memories: z.array(visibleFactSchema), hiddenMemoryIds: z.array(id).default([]) }).strict()
 const runResult = z.object({
   revision: count, processedSessions: count, created: count, updated: count, retired: count,
   unchanged: z.boolean(), sessionsRead: count, eventsSelected: count, deferred: z.boolean(),
@@ -41,6 +41,7 @@ export interface DreamingUiRemote {
   status(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<MemoryStatus>>
   search(request: SearchRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>[]>>
   read(request: FactRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>>>
+  organizeWiki(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<{ revision: number }>>
   run(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<DreamingRunResult>>
   setVisibility(request: VisibilityRequest, signal?: AbortSignal): Promise<RemoteResult<{ revision: number }>>
   setLevel(request: LevelRequest, signal?: AbortSignal): Promise<RemoteResult<{ revision: number }>>
@@ -67,6 +68,7 @@ const definitions = {
   status: { request: projectRequest, result: statusResult },
   search: { request: searchRequest, result: z.array(visibleFactSchema) },
   read: { request: factRequest, result: visibleFactSchema },
+  organizeWiki: { request: projectRequest, result: revisionResult },
   run: { request: projectRequest, result: runResult },
   setVisibility: { request: visibilityRequest, result: revisionResult },
   setLevel: { request: levelRequest, result: revisionResult },
