@@ -11,7 +11,7 @@ const citation = { type: 'object', additionalProperties: false, properties: {
 } } as const
 const fact = { type: 'object', additionalProperties: false, properties: {
   id: { type: 'string', required: true }, title: { type: 'string', required: true }, content: { type: 'string', required: true },
-  level: { type: 'integer', required: true }, inherited: { type: 'boolean' },
+  summary: { type: 'string' }, level: { type: 'integer', required: true }, inherited: { type: 'boolean' },
   category: { type: 'string', required: true }, status: { type: 'string', required: true },
   sources: { type: 'array', items: citation, required: true },
   createdAt: { type: 'string', required: true }, updatedAt: { type: 'string', required: true }, retiredReason: { type: 'string' },

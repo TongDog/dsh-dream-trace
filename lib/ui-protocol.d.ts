@@ -30,6 +30,17 @@ export declare const rollbackRequest: z.ZodObject<{
     projectRoot: z.ZodString;
     revision: z.ZodNumber;
 }, z.core.$strict>;
+export declare const updateCheckRequest: z.ZodObject<{
+    force: z.ZodDefault<z.ZodBoolean>;
+}, z.core.$strict>;
+declare const updateStatusResult: z.ZodObject<{
+    currentVersion: z.ZodString;
+    latestVersion: z.ZodNullable<z.ZodString>;
+    updateAvailable: z.ZodBoolean;
+    checkedAt: z.ZodISODateTime;
+    projectUrl: z.ZodString;
+    error: z.ZodNullable<z.ZodString>;
+}, z.core.$strict>;
 declare const statusResult: z.ZodObject<{
     projectRoot: z.ZodString;
     storageDirectory: z.ZodString;
@@ -65,10 +76,17 @@ declare const snapshotResult: z.ZodObject<{
     }, z.core.$strict>>;
     autoRunAfterTurn: z.ZodBoolean;
     autoRunIntervalMinutes: z.ZodNumber;
+    wiki: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        title: z.ZodString;
+        sourceIds: z.ZodArray<z.ZodString>;
+        links: z.ZodArray<z.ZodString>;
+    }, z.core.$strict>>>;
     memories: z.ZodArray<z.ZodUnion<readonly [z.ZodObject<{
         id: z.ZodString;
         title: z.ZodString;
         content: z.ZodString;
+        summary: z.ZodOptional<z.ZodString>;
         category: z.ZodEnum<{
             procedure: "procedure";
             decision: "decision";
@@ -100,6 +118,7 @@ declare const snapshotResult: z.ZodObject<{
         id: z.ZodString;
         title: z.ZodString;
         content: z.ZodString;
+        summary: z.ZodOptional<z.ZodString>;
         category: z.ZodEnum<{
             procedure: "procedure";
             decision: "decision";
@@ -134,15 +153,21 @@ export type FactRequest = z.infer<typeof factRequest>;
 export type VisibilityRequest = z.infer<typeof visibilityRequest>;
 export type LevelRequest = z.infer<typeof levelRequest>;
 export type RollbackRequest = z.infer<typeof rollbackRequest>;
+export type UpdateCheckRequest = z.infer<typeof updateCheckRequest>;
 export type MemorySnapshot = z.infer<typeof snapshotResult>;
 export type MemoryStatus = z.infer<typeof statusResult>;
 export type DreamingRunResult = z.infer<typeof runResult>;
+export type UpdateStatus = z.infer<typeof updateStatusResult>;
 export interface DreamingUiRemote {
     projects(signal?: AbortSignal): Promise<RemoteResult<string[]>>;
+    checkUpdate(request: UpdateCheckRequest, signal?: AbortSignal): Promise<RemoteResult<UpdateStatus>>;
     snapshot(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<MemorySnapshot>>;
     status(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<MemoryStatus>>;
     search(request: SearchRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>[]>>;
     read(request: FactRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>>>;
+    organizeWiki(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<{
+        revision: number;
+    }>>;
     run(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<DreamingRunResult>>;
     setVisibility(request: VisibilityRequest, signal?: AbortSignal): Promise<RemoteResult<{
         revision: number;

@@ -2,8 +2,8 @@
 import type { Context } from '@deepseek-ai/cordis';
 import { TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type { DreamingService } from './index.ts';
-import { type FactRequest, type LevelRequest, type ProjectRequest, type RollbackRequest, type SearchRequest, type VisibilityRequest } from './ui-protocol.ts';
-export type DreamingUiOperations = Pick<DreamingService, 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'setLevel' | 'setVisibility' | 'forget' | 'rollback'>;
+import { type FactRequest, type LevelRequest, type ProjectRequest, type RollbackRequest, type SearchRequest, type UpdateCheckRequest, type VisibilityRequest } from './ui-protocol.ts';
+export type DreamingUiOperations = Pick<DreamingService, 'organizeWiki' | 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'setLevel' | 'setVisibility' | 'forget' | 'rollback' | 'checkUpdate'>;
 declare module '@deepseek-ai/cordis' {
     interface Context {
         dreamingUi: DreamingUiBridge;
@@ -16,7 +16,21 @@ export declare class DreamingUiBridge extends TypertRemoteService {
     private readonly operations;
     constructor(ctx: Context, operations: DreamingUiOperations);
     projects(signal: AbortSignal): string[];
+    checkUpdate(request: UpdateCheckRequest, signal: AbortSignal): Promise<{
+        currentVersion: string;
+        latestVersion: string | null;
+        updateAvailable: boolean;
+        checkedAt: string;
+        projectUrl: string;
+        error: string | null;
+    }>;
     snapshot(request: ProjectRequest, signal: AbortSignal): Promise<{
+        wiki: {
+            links: string[];
+            sourceIds: string[];
+            id: string;
+            title: string;
+        }[];
         memories: import("./core/types.ts").VisibleFact[];
         hiddenMemoryIds: string[];
         projectRoot: string;
@@ -50,6 +64,9 @@ export declare class DreamingUiBridge extends TypertRemoteService {
     }>;
     search(request: SearchRequest, signal: AbortSignal): Promise<import("./core/types.ts").VisibleFact[]>;
     read(request: FactRequest, signal: AbortSignal): Promise<import("./core/types.ts").VisibleFact>;
+    organizeWiki(request: ProjectRequest, signal: AbortSignal): Promise<{
+        revision: number;
+    }>;
     run(request: ProjectRequest, signal: AbortSignal): Promise<{
         sessionsRead: number;
         eventsSelected: number;
@@ -75,4 +92,7 @@ export declare class DreamingUiBridge extends TypertRemoteService {
     }>;
     private owner;
     private scoped;
+    /** Owner-guarded call for operations that are not scoped to one project. */
+    private guarded;
+    private execute;
 }

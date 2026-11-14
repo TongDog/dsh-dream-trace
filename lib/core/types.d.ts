@@ -16,6 +16,7 @@ export declare const updateSchema: z.ZodObject<{
     id: z.ZodOptional<z.ZodString>;
     title: z.ZodString;
     content: z.ZodString;
+    summary: z.ZodOptional<z.ZodString>;
     category: z.ZodEnum<{
         procedure: "procedure";
         decision: "decision";
@@ -40,6 +41,7 @@ export declare const proposalSchema: z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
         title: z.ZodString;
         content: z.ZodString;
+        summary: z.ZodOptional<z.ZodString>;
         category: z.ZodEnum<{
             procedure: "procedure";
             decision: "decision";
@@ -87,6 +89,7 @@ export declare const factSchema: z.ZodObject<{
     id: z.ZodString;
     title: z.ZodString;
     content: z.ZodString;
+    summary: z.ZodOptional<z.ZodString>;
     category: z.ZodEnum<{
         procedure: "procedure";
         decision: "decision";
@@ -120,6 +123,7 @@ export declare const visibleFactSchema: z.ZodUnion<readonly [z.ZodObject<{
     id: z.ZodString;
     title: z.ZodString;
     content: z.ZodString;
+    summary: z.ZodOptional<z.ZodString>;
     category: z.ZodEnum<{
         procedure: "procedure";
         decision: "decision";
@@ -151,6 +155,7 @@ export declare const visibleFactSchema: z.ZodUnion<readonly [z.ZodObject<{
     id: z.ZodString;
     title: z.ZodString;
     content: z.ZodString;
+    summary: z.ZodOptional<z.ZodString>;
     category: z.ZodEnum<{
         procedure: "procedure";
         decision: "decision";
@@ -176,6 +181,13 @@ export declare function agentFacts<T extends {
     facts: T[];
     hiddenMemoryIds?: string[];
 }): T[];
+export declare const wikiPageSchema: z.ZodObject<{
+    id: z.ZodString;
+    title: z.ZodString;
+    sourceIds: z.ZodArray<z.ZodString>;
+    links: z.ZodArray<z.ZodString>;
+}, z.core.$strict>;
+export type WikiPage = z.infer<typeof wikiPageSchema>;
 export declare const stateSchema: z.ZodObject<{
     schemaVersion: z.ZodLiteral<1>;
     projectId: z.ZodString;
@@ -183,10 +195,17 @@ export declare const stateSchema: z.ZodObject<{
     parentRevision: z.ZodNullable<z.ZodNumber>;
     parentHash: z.ZodNullable<z.ZodString>;
     createdAt: z.ZodISODateTime;
+    wiki: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        title: z.ZodString;
+        sourceIds: z.ZodArray<z.ZodString>;
+        links: z.ZodArray<z.ZodString>;
+    }, z.core.$strict>>>;
     facts: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         title: z.ZodString;
         content: z.ZodString;
+        summary: z.ZodOptional<z.ZodString>;
         category: z.ZodEnum<{
             procedure: "procedure";
             decision: "decision";

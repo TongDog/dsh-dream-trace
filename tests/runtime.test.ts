@@ -17,6 +17,7 @@ import Dreaming, { type ConfigInput } from '../src/index.ts'
 
 const instruction = 'For this project, run npm run test:unit to execute unit tests.'
 const memoryTitle = 'Project unit test command'
+const memorySummary = 'Use npm run test:unit for unit tests.'
 const memoryContent = 'The project user specifies npm run test:unit as the unit test command.'
 const pluginTools = ['dream_run', 'dream_status', 'dream_rollback', 'memory_search', 'memory_read', 'memory_set_level', 'memory_forget']
 const payloadSchema = z.object({
@@ -67,7 +68,7 @@ class ScriptedAdapter extends LlmAdapter {
     const event = payload.events.find(event => event.kind === 'user' && event.text.includes(instruction))
     assert.ok(event, 'the extractor must receive original user evidence')
     yield* textResponse(JSON.stringify({
-      updates: [{ title: memoryTitle, content: memoryContent, category: 'procedure', status: 'supported', evidence: [{ sessionId: event.sessionId, seq: event.seq, quote: instruction }] }],
+      updates: [{ title: memoryTitle, summary: memorySummary, content: memoryContent, category: 'procedure', status: 'supported', evidence: [{ sessionId: event.sessionId, seq: event.seq, quote: instruction }] }],
       retire: [],
     }))
   }
@@ -287,7 +288,8 @@ test('registered DSH tools validate arguments and expose search, read, forget an
     assert.equal(matches[0].title, memoryTitle)
     const read = await invoke('memory_read', { id: matches[0].id })
     assert.equal(read.isError, false)
-    const fact = z.object({ content: z.string(), sources: z.array(z.object({ sessionId: z.string(), seq: z.number(), quote: z.string() })) }).parse(read.value)
+    const fact = z.object({ summary: z.string(), content: z.string(), sources: z.array(z.object({ sessionId: z.string(), seq: z.number(), quote: z.string() })) }).parse(read.value)
+    assert.equal(fact.summary, memorySummary)
     assert.equal(fact.content, memoryContent)
     assert.equal(fact.sources[0].sessionId, agent.id)
     assert.equal(fact.sources[0].quote, instruction)

@@ -4,15 +4,15 @@ export * from './store.ts'
 export * from './engine.ts'
 export * from './security.ts'
 import { MemoryStore } from './store.ts'
-import { agentFacts, CoreError, type VisibleFact } from './types.ts'
+import { agentFacts, CoreError, type WikiPage, type VisibleFact } from './types.ts'
 
-export interface RecallView { revision: number; facts: VisibleFact[]; hiddenMemoryIds?: string[] }
+export interface RecallView { wiki?: WikiPage[]; revision: number; facts: VisibleFact[]; hiddenMemoryIds?: string[] }
 
 /** Compose only for recall. Consolidation, history and mutations always use the source store. */
 export async function recallView(store: MemoryStore, enabled: Iterable<MemoryStore>): Promise<RecallView> {
   const siblings = [...enabled].filter(other => other !== store)
   const [local, shared] = await Promise.all([store.read(), Promise.all(siblings.map(other => other.sharedFacts()))])
-  return { revision: local.revision, hiddenMemoryIds: local.hiddenMemoryIds, facts: [...local.facts, ...shared.flat()] }
+  return { wiki: local.wiki, revision: local.revision, hiddenMemoryIds: local.hiddenMemoryIds, facts: [...local.facts, ...shared.flat()] }
 }
 
 function priority(a: VisibleFact, b: VisibleFact): number {

@@ -20,7 +20,7 @@ window.__ModuleLoader__.load({
 .dreaming-top,.dreaming-actions,.dreaming-row,.dreaming-tags,.dreaming-tabs{display:flex;align-items:center;gap:10px}.dreaming-top{justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:18px;margin-bottom:22px}
 .dreaming-muted{color:var(--dsw-alias-label-secondary)}.dreaming-small{font-size:12px}.dreaming-subtitle{margin-top:6px!important;max-width:630px}
 .dreaming-page button,.dreaming-page input,.dreaming-page select{font:inherit;color:inherit;line-height:1.4}.dreaming-page button{cursor:pointer}.dreaming-page button:disabled{cursor:default;opacity:.5}
-.dreaming-page button:focus-visible,.dreaming-page input:focus-visible,.dreaming-page select:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:3px}
+.dreaming-page button:focus-visible,.dreaming-page input:focus-visible,.dreaming-page select:focus-visible,.dreaming-page a:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:3px}
 .dreaming-button{border:1px solid var(--dsw-alias-border-l2);border-radius:9px;background:var(--dsw-alias-bg-base);padding:8px 13px;white-space:nowrap;min-height:36px}
 .dreaming-button:hover:not(:disabled){background:var(--dsw-alias-bg-layer-1)}.dreaming-button.primary{background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-primary-foreground);border-color:transparent}.dreaming-button.danger{color:var(--dsw-alias-state-error-primary)}
 .dreaming-field{display:grid;gap:6px}.dreaming-select,.dreaming-search{border:1px solid var(--dsw-alias-border-l2);border-radius:9px;background:var(--dsw-alias-bg-base);padding:9px 12px;min-width:0;min-height:39px}.dreaming-project{width:min(100%,660px);margin-bottom:20px}
@@ -29,17 +29,25 @@ window.__ModuleLoader__.load({
 .dreaming-workspace{display:grid;grid-template-columns:minmax(270px,.85fr) minmax(300px,1.25fr);gap:20px;align-items:start}.dreaming-filters{display:grid;gap:9px;margin-bottom:12px}.dreaming-filters .dreaming-row>*{width:50%}.dreaming-list{display:grid;gap:8px;max-height:65vh;overflow:auto;padding:3px}
 .dreaming-card{text-align:left;display:grid;gap:8px;width:100%;padding:15px;border:1px solid var(--dsw-alias-border-l1);border-radius:11px;background:var(--dsw-alias-bg-base)}.dreaming-card:hover{background:var(--dsw-alias-bg-layer-1)}.dreaming-card[aria-pressed="true"]{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-1)}.dreaming-card-title{font-weight:600;overflow-wrap:anywhere}.dreaming-preview{font-size:12px;color:var(--dsw-alias-label-secondary);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 .dreaming-tags{gap:6px;flex-wrap:wrap}.dreaming-badge{font-size:11px;font-weight:500;border-radius:5px;padding:2px 7px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary)}.dreaming-badge.supported{color:var(--dsw-alias-state-success-primary)}.dreaming-badge.uncertain{color:var(--dsw-alias-state-warn-primary)}.dreaming-badge.stale{text-decoration:line-through}
-.dreaming-detail{border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:22px;min-height:350px;overflow-wrap:anywhere}.dreaming-detail h2{margin:12px 0}.dreaming-content{white-space:pre-wrap;line-height:1.8;margin:18px 0!important}.dreaming-divider{border:0;border-top:1px solid var(--dsw-alias-border-l1);margin:22px 0}.dreaming-source{margin-top:12px;padding:12px 14px;background:var(--dsw-alias-bg-layer-1);border-radius:8px;border-left:3px solid var(--dsw-alias-border-l2)}.dreaming-source blockquote{margin:8px 0;white-space:pre-wrap}.dreaming-source code{font-size:11px;overflow-wrap:anywhere}.dreaming-detail-footer{display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap;margin-top:22px}
+.dreaming-detail{border:1px solid var(--dsw-alias-border-l1);border-radius:12px;padding:22px;min-height:350px;overflow-wrap:anywhere}.dreaming-detail h2{margin:12px 0}.dreaming-summary{margin:16px 0;padding:12px 14px;border-radius:9px;background:var(--dsw-alias-bg-layer-2)}.dreaming-summary p{margin-top:4px;line-height:1.65}.dreaming-content{white-space:pre-wrap;line-height:1.8;margin:4px 0 18px!important}.dreaming-divider{border:0;border-top:1px solid var(--dsw-alias-border-l1);margin:22px 0}.dreaming-source{margin-top:12px;padding:12px 14px;background:var(--dsw-alias-bg-layer-1);border-radius:8px;border-left:3px solid var(--dsw-alias-border-l2)}.dreaming-source blockquote{margin:8px 0;white-space:pre-wrap}.dreaming-source code{font-size:11px;overflow-wrap:anywhere}.dreaming-detail-footer{display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap;margin-top:22px}
 .dreaming-access{display:flex;align-items:center;justify-content:space-between;gap:16px;user-select:none;margin:18px 0;padding:12px 14px;border:1px solid var(--dsw-alias-border-l2);border-radius:9px}.dreaming-access strong,.dreaming-access small{display:block}.dreaming-access small{color:var(--dsw-alias-label-secondary);font-size:12px;margin-top:3px}
 .dreaming-switch{appearance:none;flex:none;width:36px;height:22px;border:1px solid var(--dsw-alias-label-secondary);border-radius:14px;background:var(--dsw-alias-bg-layer-2);margin:0;cursor:pointer}.dreaming-switch:before{content:"";display:block;width:14px;height:14px;margin:3px;border-radius:50%;background:var(--dsw-alias-label-secondary)}.dreaming-switch:checked{background:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary)}.dreaming-switch:checked:before{transform:translateX(14px);background:var(--dsw-alias-bg-base)}.dreaming-switch:disabled{opacity:.55;cursor:default}
 @media(forced-colors:active){.dreaming-switch{appearance:auto}.dreaming-switch:before{display:none}}
 .dreaming-list-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:12px 0}.dreaming-list-meta label{display:inline-flex;align-items:center;gap:6px}
 .dreaming-empty{padding:42px 22px;text-align:center;border:1px dashed var(--dsw-alias-border-l2);border-radius:12px;color:var(--dsw-alias-label-secondary)}.dreaming-empty strong{display:block;color:var(--dsw-alias-label-primary);margin-bottom:8px}.dreaming-empty svg{margin-bottom:12px}.dreaming-message{padding:12px 15px;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-layer-1);margin-bottom:14px;overflow-wrap:anywhere}.dreaming-error{color:var(--dsw-alias-state-error-primary)}.dreaming-confirm{margin-top:15px;padding:15px;border:1px solid var(--dsw-alias-state-warn-primary);border-radius:10px}.dreaming-confirm .dreaming-actions{margin-top:12px}.dreaming-history{display:grid;gap:10px}.dreaming-history-row{display:flex;align-items:center;gap:18px;justify-content:space-between;padding:16px 20px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px}.dreaming-history-row strong{font-size:16px}.dreaming-history-row .dreaming-muted{margin-top:3px}.dreaming-caption{margin:14px 0!important}.dreaming-spin{display:inline-block;animation:dreaming-pulse 1.4s ease-in-out infinite}@keyframes dreaming-pulse{50%{opacity:.4}}@media(prefers-reduced-motion:reduce){.dreaming-spin{animation:none}}@media(max-width:900px){.dreaming-page{padding:22px 20px}.dreaming-workspace{grid-template-columns:1fr}.dreaming-list{max-height:380px}.dreaming-stats{gap:8px}.dreaming-stat{padding:12px}.dreaming-top .dreaming-actions{flex-wrap:wrap}}@media(max-width:480px){.dreaming-stats{grid-template-columns:repeat(2,1fr)}.dreaming-page{padding:18px 12px}.dreaming-history-row{align-items:flex-start;flex-wrap:wrap}}
+.dreaming-version{font-size:12px;color:var(--dsw-alias-label-secondary);white-space:nowrap}
+.dreaming-update{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border-color:var(--dsw-alias-brand-primary)}.dreaming-update>div{min-width:0}.dreaming-update p{margin-top:4px!important}.dreaming-update .dreaming-actions{margin-left:auto}.dreaming-update a{text-decoration:none;display:inline-flex;align-items:center}.dreaming-update-note{overflow-wrap:anywhere;margin-bottom:12px!important}
 `;
     function Icon({ size = 20 }) {
       return h('svg', { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
         h('path', { d: 'M9 4a3 3 0 0 0-5 2.2 3.8 3.8 0 0 0-1 6.9A4 4 0 0 0 7 19a3 3 0 0 0 5 1 3 3 0 0 0 5-1 4 4 0 0 0 4-5.9 3.8 3.8 0 0 0-1-6.9A3 3 0 0 0 15 4' }),
         h('path', { d: 'M12 4v16M8 8c-2 0-3 2-2 4m12 0c1-2 0-4-2-4M7 15c2 0 3 1 3 3m7-3c-2 0-3 1-3 3' }));
+    }
+    function summaryOf(fact) {
+      if (fact.summary) return fact.summary;
+      const [sentence] = fact.content.trim().split(/(?<=[。！？])|(?<=[.!?])\s+|[\r\n]+/u, 1);
+      const chars = Array.from(sentence);
+      return chars.length <= 160 ? sentence : chars.slice(0, 159).join('').trimEnd() + '…';
     }
     function Page({ t, api }) {
       const [projects, setProjects] = useState(null);
@@ -51,12 +59,16 @@ window.__ModuleLoader__.load({
       const [levelFilter, setLevelFilter] = useState(0);
       const [category, setCategory] = useState('all');
       const [status, setStatus] = useState('active');
+      const [pageId, setPageId] = useState('');
       const [tab, setTab] = useState('memories');
       const [loading, setLoading] = useState(false);
       const [busy, setBusy] = useState(false);
       const [error, setError] = useState('');
       const [notice, setNotice] = useState(null);
       const [confirmation, setConfirmation] = useState(null);
+      const [update, setUpdate] = useState(null);
+      const [updateBusy, setUpdateBusy] = useState(false);
+      const [updateDismissed, setUpdateDismissed] = useState(false);
       const alive = useRef(true);
       const version = useRef(0);
       const translate = useRef(t);
@@ -73,6 +85,20 @@ window.__ModuleLoader__.load({
         if (!result.ok) throw result.error;
         return result.value;
       }, [api]);
+      const checkUpdate = useCallback(async manual => {
+        setUpdateBusy(true);
+        try {
+          const value = await call('checkUpdate', { force: Boolean(manual) });
+          if (!alive.current) return;
+          setUpdate({ ...value, manual });
+          if (value.updateAvailable) setUpdateDismissed(false);
+        } catch (e) {
+          // An automatic check is silent: only a user-initiated request reports its failure.
+          if (alive.current) setUpdate(previous => ({ currentVersion: previous?.currentVersion || '', latestVersion: null, updateAvailable: false, checkedAt: '', projectUrl: '', error: e?.message || String(e), manual }));
+        } finally {
+          if (alive.current) setUpdateBusy(false);
+        }
+      }, [call]);
       const load = useCallback(async (root, clearError = true) => {
         if (!root) return;
         const requestVersion = ++version.current;
@@ -102,11 +128,13 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         alive.current = true;
         void loadProjects();
+        void checkUpdate(false);
         return () => { alive.current = false; ++version.current; };
-      }, [loadProjects]);
+      }, [loadProjects, checkUpdate]);
       useEffect(() => {
         ++version.current;
         setSnapshot(null);
+        setPageId('');
         setSelected('');
         setConfirmation(null);
         setNotice(null);
@@ -147,8 +175,15 @@ window.__ModuleLoader__.load({
       const empty = (title, body) => h('div', { className: 'dreaming-empty' }, h(Icon, { size: 34 }), h('strong', null, title), h('p', null, body));
       const all = snapshot?.memories || [];
       const hidden = new Set(snapshot?.hiddenMemoryIds);
-      const filtered = all.filter(f => (!pausedOnly || hidden.has(f.id)) && (!levelFilter || f.level === levelFilter) && (category === 'all' || f.category === category) && (status === 'all' || status === 'active' ? status === 'all' || f.status !== 'stale' : f.status === status) && (!query.trim() || `${f.title}\n${f.content}\n${f.sources.map(s => s.quote).join('\n')}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))).sort((a,b) => a.level - b.level || b.updatedAt.localeCompare(a.updatedAt));
+      const filtered = all.filter(f => (!pausedOnly || hidden.has(f.id)) && (!levelFilter || f.level === levelFilter) && (category === 'all' || f.category === category) && (status === 'all' || status === 'active' ? status === 'all' || f.status !== 'stale' : f.status === status) && (!query.trim() || `${f.title}\n${f.summary || ''}\n${f.content}\n${f.sources.map(s => s.quote).join('\n')}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))).sort((a,b) => a.level - b.level || b.updatedAt.localeCompare(a.updatedAt));
       const fact = filtered.find(f => f.id === selected) || filtered[0];
+      const pages = snapshot?.wiki || [];
+      const page = pages.find(item => item.id === pageId) || pages[0];
+      function openSource(id) {
+        setQuery(''); setLevelFilter(0); setPausedOnly(false); setCategory('all'); setStatus('all');
+        setSelected(id); setTab('memories');
+      }
+      const summary = fact && summaryOf(fact);
       const locked = busy || loading || snapshot?.running || Boolean(error);
       const renderConfirm = () => confirmation && h('div', { className: 'dreaming-confirm', role: 'alert' },
         h('strong', null, confirmation.method === 'setLevel' ? t('shareTitle') : confirmation.method === 'forget' ? t('confirmForgetTitle') : `${t('confirmRollbackTitle')} #${confirmation.args.revision}`),
@@ -158,18 +193,31 @@ window.__ModuleLoader__.load({
         h('style', null, css),
         h('div', { className: 'dreaming-top' },
           h('div', null, h('h1', null, t('panel')), h('p', { className: 'dreaming-muted dreaming-subtitle' }, t('subtitle'))),
-          h('div', { className: 'dreaming-actions' }, button(loading ? t('loading') : t('refresh'), () => void (project ? load(project) : loadProjects()), { disabled: busy || loading }), button(busy || snapshot?.running ? t('running') : t('dream'), () => void act('run'), { className: 'dreaming-button primary', disabled: !project || !snapshot || locked }))),
+          h('div', { className: 'dreaming-actions' },
+            update?.currentVersion && h('span', { className: 'dreaming-version' }, `v${update.currentVersion}`),
+            button(updateBusy ? t('checking') : t('checkUpdate'), () => void checkUpdate(true), { disabled: updateBusy }),
+            button(loading ? t('loading') : t('refresh'), () => void (project ? load(project) : loadProjects()), { disabled: busy || loading }),
+            button(busy || snapshot?.running ? t('running') : t('dream'), () => void act('run'), { className: 'dreaming-button primary', disabled: !project || !snapshot || locked }))),
+        update?.updateAvailable && !updateDismissed && h('div', { role: 'status', className: 'dreaming-message dreaming-update' },
+          h('div', null,
+            h('strong', null, t('updateAvailable')),
+            h('p', { className: 'dreaming-small dreaming-muted' }, `${t('currentVersion')} ${update.currentVersion} · ${t('latestVersion')} ${update.latestVersion}`)),
+          h('div', { className: 'dreaming-actions' },
+            h('a', { className: 'dreaming-button primary', href: update.projectUrl, target: '_blank', rel: 'noreferrer noopener' }, t('viewUpdate')),
+            button(t('dismiss'), () => setUpdateDismissed(true)))),
+        update?.error && update.manual && h('p', { role: 'status', className: 'dreaming-small dreaming-muted dreaming-update-note' }, `${t('updateCheckFailed')}: ${update.error}`),
+        update?.manual && !update.error && !update.updateAvailable && h('p', { role: 'status', className: 'dreaming-small dreaming-muted' }, t('updateCurrent')),
         error && h('div', { role: 'alert', className: 'dreaming-message dreaming-error' }, error),
         notice && h('div', { role: 'status', className: 'dreaming-message' }, notice.method === 'run'
           ? `${t('dreamDone')} ${t('created')}: ${notice.value.created} · ${t('updated')}: ${notice.value.updated} · ${t('retired')}: ${notice.value.retired}${notice.value.unchanged ? ` · ${t('unchanged')}` : ''}`
-          : `${t(notice.method === 'setVisibility' ? 'visibilitySaved' : notice.method === 'setLevel' ? 'levelChanged' : notice.method === 'forget' ? 'forgotten' : 'rolledBack')} #${notice.value.revision}`),
+          : `${t(notice.method === 'organizeWiki' ? 'wikiDone' : notice.method === 'setVisibility' ? 'visibilitySaved' : notice.method === 'setLevel' ? 'levelChanged' : notice.method === 'forget' ? 'forgotten' : 'rolledBack')} #${notice.value.revision}`),
         projects === null && !error && h('p', { role: 'status', className: 'dreaming-muted' }, t('loading')),
         projects?.length === 0 && empty(t('noProjects'), t('configureProjects')),
         projects?.length > 0 && h('label', { className: 'dreaming-field dreaming-project' }, h('span', { className: 'dreaming-small dreaming-muted' }, t('project')), h('select', { className: 'dreaming-select', value: project, title: project, disabled: busy, onChange: e => setProject(e.target.value) }, projects.map(root => h('option', { key: root, value: root }, `${root.split(/[\\/]/).filter(Boolean).pop()} — ${root}`)))),
         snapshot && h(React.Fragment, null,
           h('div', { className: 'dreaming-stats' },
             ...[['activeCount', all.filter(f => f.status !== 'stale').length], ['supportedCount', all.filter(f => f.status === 'supported').length], ['uncertainCount', all.filter(f => f.status === 'uncertain').length], ['revision', `#${snapshot.revision}`]].map(([label, count]) => h('div', { className: 'dreaming-stat', key: label }, h('span', null, t(label)), h('strong', null, count)))),
-          h('div', { className: 'dreaming-tabs', 'aria-label': t('views') }, ...['memories', 'history'].map(value => h('button', { type: 'button', key: value, className: 'dreaming-tab', 'aria-pressed': tab === value, onClick: () => { setTab(value); setConfirmation(null); } }, t(value)))),
+          h('div', { className: 'dreaming-tabs', 'aria-label': t('views') }, ...['memories', 'wiki', 'history'].map(value => h('button', { type: 'button', key: value, className: 'dreaming-tab', 'aria-pressed': tab === value, onClick: () => { setTab(value); setConfirmation(null); } }, t(value)))),
           tab === 'memories' ? h('div', { className: 'dreaming-workspace' },
             h('div', null,
               h('div', { className: 'dreaming-filters' },
@@ -181,12 +229,13 @@ window.__ModuleLoader__.load({
               h('div', { className: 'dreaming-list-meta dreaming-small' },
                 h('label', null, h('input', { type: 'checkbox', checked: pausedOnly, onChange: e => setPausedOnly(e.target.checked) }), t('pausedOnly')),
                 h('span', { className: 'dreaming-muted', 'aria-live': 'polite' }, `${filtered.length} ${t('results')}`)),
-              filtered.length ? h('div', { className: 'dreaming-list', 'aria-label': t('memories') }, ...filtered.map(f => h('button', { type: 'button', key: f.id, className: 'dreaming-card', 'aria-pressed': f.id === fact?.id, onClick: () => { setSelected(f.id); setConfirmation(null); } }, h('div', { className: 'dreaming-tags' }, badge('level', f.level), badge('category', f.category), badge('status', f.status), hidden.has(f.id) && h('span', { className: 'dreaming-badge' }, t('paused'))), h('span', { className: 'dreaming-card-title' }, f.title), h('span', { className: 'dreaming-preview' }, f.content), h('span', { className: 'dreaming-small dreaming-muted' }, `${f.sources.length} ${t('sources')} · ${formatDate(f.updatedAt)}`))))
+              filtered.length ? h('div', { className: 'dreaming-list', 'aria-label': t('memories') }, ...filtered.map(f => h('button', { type: 'button', key: f.id, className: 'dreaming-card', 'aria-pressed': f.id === fact?.id, onClick: () => { setSelected(f.id); setConfirmation(null); } }, h('div', { className: 'dreaming-tags' }, badge('level', f.level), badge('category', f.category), badge('status', f.status), hidden.has(f.id) && h('span', { className: 'dreaming-badge' }, t('paused'))), h('span', { className: 'dreaming-card-title' }, f.title), h('span', { className: 'dreaming-preview' }, summaryOf(f)), h('span', { className: 'dreaming-small dreaming-muted' }, `${f.sources.length} ${t('sources')} · ${formatDate(f.updatedAt)}`))))
                 : empty(t(all.length ? 'noMatches' : 'noMemories'), t(all.length ? 'adjustFilters' : 'firstDream'))),
             fact ? h('article', { className: 'dreaming-detail', 'aria-label': t('detail') },
               h('div', { className: 'dreaming-tags' }, badge('level', fact.level), badge('category', fact.category), badge('status', fact.status)),
               h('h2', null, fact.title), h('p', { className: 'dreaming-small dreaming-muted' }, `${t('updatedAt')} ${formatDate(fact.updatedAt)}`),
-              h('p', { className: 'dreaming-content' }, fact.content),
+              h('div', { className: 'dreaming-summary' }, h('h3', null, t('summary')), h('p', null, summary)),
+              summary !== fact.content.trim() && h('div', null, h('h3', null, t('content')), h('p', { className: 'dreaming-content' }, fact.content)),
               h('label', { className: 'dreaming-access' },
                 h('span', null, h('strong', null, t('agentAccess')), h('small', { id: 'dreaming-access-hint' }, t(fact.level === 1 && !fact.inherited ? 'accessGlobalHint' : 'accessProjectHint'))),
                 h('input', { type: 'checkbox', role: 'switch', className: 'dreaming-switch', 'aria-label': t('agentAccess'), 'aria-describedby': 'dreaming-access-hint',
@@ -206,6 +255,19 @@ window.__ModuleLoader__.load({
                 h('blockquote', null, source.quote), h('code', null, `${source.sessionId} · #${source.seq}`))),
               h('div', { className: 'dreaming-detail-footer' }, h('span', { className: 'dreaming-small dreaming-muted' }, `${t('createdAt')} ${formatDate(fact.createdAt)}`), !fact.inherited && button(t('forget'), () => setConfirmation({ method: 'forget', args: { id: fact.id } }), { className: 'dreaming-button danger', disabled: locked })), confirmation?.method === 'forget' && confirmation.args.id === fact.id && renderConfirm())
               : empty(t('selectMemory'), t('selectMemoryBody')))
+            : tab === 'wiki' ? h('div', { className: 'dreaming-workspace' },
+              h('div', null,
+                button(t(page ? 'wikiContinue' : 'wikiGenerate'), () => void act('organizeWiki'), { disabled: locked || !all.some(f => !f.inherited && !hidden.has(f.id) && f.status === 'supported') }),
+                h('div', { className: 'dreaming-list' }, pages.map(item => button(item.title, () => setPageId(item.id), { key: item.id, 'aria-pressed': page?.id === item.id, className: 'dreaming-card' })))),
+              page ? h('article', { className: 'dreaming-detail' }, h('h2', null, page.title),
+                ...page.sourceIds.map(id => {
+                  const source = all.find(item => item.id === id);
+                  return source && h('section', { key: id }, h('h3', null, source.title), h('p', { className: 'dreaming-content' }, source.content),
+                    button(t('wikiSource'), () => openSource(id)));
+                }),
+                page.links.length > 0 && h('nav', { className: 'dreaming-actions', 'aria-label': t('wikiRelated') }, h('strong', null, t('wikiRelated')),
+                  ...page.links.map(id => button(pages.find(item => item.id === id).title, () => setPageId(id), { key: id }))))
+                : empty(t('wikiEmpty'), t('wikiHint')))
             : h('div', null, h('p', { className: 'dreaming-muted dreaming-caption' }, t('historyHint')), confirmation?.method === 'rollback' && renderConfirm(),
               !snapshot.revisions.length && empty(t('noHistory'), t('firstDream')), h('div', { className: 'dreaming-history' }, ...[...snapshot.revisions].sort((a,b) => b.revision - a.revision).map(rev => h('div', { key: rev.revision, className: 'dreaming-history-row' }, h('div', null, h('strong', null, `${t('revision')} #${rev.revision}`), rev.revision === snapshot.revision && h('span', { className: 'dreaming-badge', style: { marginLeft: 8 } }, t('current')), h('p', { className: 'dreaming-small dreaming-muted' }, `${formatDate(rev.createdAt)} · ${rev.facts} ${t('results')}`)), button(t('rollback'), () => setConfirmation({ method: 'rollback', args: { revision: rev.revision } }), { disabled: locked || rev.revision === snapshot.revision }))))),
           h('p', { className: 'dreaming-small dreaming-muted dreaming-caption' }, `${t('automation')}: ${snapshot.autoRunAfterTurn ? t('afterTurn') : snapshot.autoRunIntervalMinutes ? t('periodic') : t('manual')}${snapshot.autoRunIntervalMinutes ? ` · ${snapshot.autoRunIntervalMinutes} ${t('minutes')}` : ''} · ${t('lastOperation')}: ${formatDate(snapshot.lastRun?.at)}`),

@@ -19,6 +19,7 @@ import type { PeerId, PeerScope, Principal, RemoteResult } from '@deepseek-ai/ds
 import Dreaming from '../src/index.ts'
 import { MemoryStore, type MemoryFact } from '../src/core/index.ts'
 import { dreamingClientContribution, type DreamingUiRemote } from '../src/ui-protocol.ts'
+import { installedVersion } from '../src/update-check.ts'
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface PrincipalMap { 'dreaming-test-guest': { kind: 'dreaming-test-guest' } }
@@ -40,6 +41,7 @@ function failure(result: RemoteResult<unknown>, code: string) {
 function fact(id: string, status: MemoryFact['status'] = 'supported'): MemoryFact {
   const time = '2026-01-01T00:00:00.000Z'
   return { id, level: 4, title: `Test command ${id}`, content: 'Run npm test in this project.', category: 'procedure', status,
+    ...(id === 'first' ? { summary: 'Use the project test command.' } : {}),
     createdAt: time, updatedAt: time,
     sources: [{ sessionId: 'original-conversation', seq: 4, quote: 'Run npm test in this project.', kind: 'user', observedAt: time }],
     ...(status === 'stale' ? { retiredReason: 'Superseded by a later command.' } : {}),
@@ -113,6 +115,7 @@ test('official Client mount and Host gateway expose complete scoped snapshots an
     const snapshot = value(await ui.snapshot({ projectRoot: f.projectRoot }))
     assert.equal(snapshot.revision, 1)
     assert.equal(snapshot.memories.length, 3, 'snapshot must not be capped by model searchLimit')
+    assert.equal(snapshot.memories.find(row => row.id === 'first')?.summary, fact('first').summary)
     assert.equal(snapshot.facts, 2)
     assert.equal(snapshot.memories.find(row => row.id === 'retired')?.status, 'stale')
     assert.deepEqual(snapshot.revisions.map(row => row.revision), [1])
@@ -120,6 +123,41 @@ test('official Client mount and Host gateway expose complete scoped snapshots an
     assert.equal(value(await ui.search({ projectRoot: f.projectRoot, query: 'test' })).length, 1)
     assert.equal(value(await ui.snapshot({ projectRoot: f.secondRoot })).memories.length, 0)
   } finally { await f.close() }
+})
+
+test('the update check is owner-only, owner-cached, and decodes its strict result', { timeout: 30000 }, async () => {
+  const f = await fixture()
+  const original = globalThis.fetch
+  let calls = 0
+  try {
+    globalThis.fetch = (async () => {
+      calls += 1
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ version: calls === 1 ? '9.9.9' : '9.9.10' }) }
+    }) as unknown as typeof fetch
+    const ui = f.client.remote.dreamingUi
+    const first = value(await ui.checkUpdate({ force: true }))
+    assert.equal(first.currentVersion, installedVersion())
+    assert.equal(first.latestVersion, '9.9.9')
+    assert.equal(first.updateAvailable, true)
+    assert.equal(first.error, null)
+    assert.equal(first.projectUrl, 'https://github.com/TongDog/dsh-dream-trace')
+    assert.doesNotThrow(() => new Date(first.checkedAt).toISOString())
+    assert.deepEqual(value(await ui.checkUpdate({ force: false })), first, 'the second call must be served from the owner cache')
+    assert.equal(calls, 1)
+    const forced = value(await ui.checkUpdate({ force: true }))
+    assert.equal(forced.latestVersion, '9.9.10')
+    assert.equal(calls, 2)
+    failure(await ui.checkUpdate({ force: 'yes' } as never), 'gateway/input-invalid')
+    failure(await ui.checkUpdate({ force: false, extra: true } as never), 'gateway/input-invalid')
+    f.host.remoteAccess.registerPolicy('dreaming-test-guest', { bindings: () => [{
+      resource: { kind: 'global' }, role: { name: 'update-probe', resource: 'global', actions: ['dreamingUi/checkUpdate'] },
+    }] })
+    f.setPeer({ kind: 'dreaming-test-guest' })
+    failure(await ui.checkUpdate({ force: true }), 'dreaming/forbidden')
+  } finally {
+    globalThis.fetch = original
+    await f.close()
+  }
 })
 
 test('the bridge rejects guest users, path substitution, unknown fields, and malformed writes before changing memory', { timeout: 30000 }, async () => {
@@ -258,6 +296,7 @@ test('level changes through the UI and dsh tools share only the approved record 
     assert.equal(visible.length, 1)
     const shared = visible[0]
     assert.equal(shared.level, 1)
+    assert.equal(shared.summary, undefined, 'only the approved title and body are shared')
     assert.deepEqual(shared.sources, [])
     assert.doesNotMatch(JSON.stringify(visible), /original-conversation|Test command second/)
     assert.deepEqual(value(await ui.read({ ...other, id: shared.id })), shared)
@@ -301,5 +340,49 @@ test('owner visibility pauses and restores recall while preserving management re
     assert.deepEqual(value(await ui.snapshot(receiver)).hiddenMemoryIds, [shared.id])
     value(await ui.setVisibility({ ...receiver, id: shared.id, visible: true, expectedRevision: 1 }))
     assert.deepEqual(value(await ui.read({ ...receiver, id: shared.id })), shared)
+  } finally { await f.close() }
+})
+
+test('wiki pages use live sources, repair pending links without transcripts, and roll back together', async () => {
+  const f = await fixture()
+  try {
+    const { organizeWiki } = await import('../src/core/wiki.ts')
+    const limits = { maxInputChars: 60000, maxProposalChars: 12000 }
+    const root = { projectRoot: f.projectRoot }
+    const snapshot = async () => value(await f.client.remote.dreamingUi.snapshot(root))
+    const index = { id: 'testing', title: 'Test workflow', sourceIds: ['first'], links: ['commands', 'typo'] }
+    const commands = { id: 'commands', title: 'Test commands', sourceIds: ['second'], links: ['testing'] }
+    const first = await organizeWiki(f.store, limits, async () => JSON.stringify([index]))
+    assert.deepEqual((await snapshot()).wiki[0].links, [])
+    const second = await organizeWiki(f.store, limits, async (_, input) => {
+      assert.deepEqual(JSON.parse(input).missingLinks.map((item: { target: string }) => item.target), ['commands', 'typo'])
+      return JSON.stringify([commands])
+    })
+    assert.deepEqual(second.cursors, first.cursors)
+    assert.deepEqual((await snapshot()).wiki, [{ ...index, links: ['commands'] }, commands])
+    assert.equal((await organizeWiki(f.store, limits, async () => '[]')).revision, second.revision)
+    await assert.rejects(organizeWiki(f.store, limits, async () => JSON.stringify([{ ...index, sourceIds: ['retired'] }])))
+    await f.store.transact(async state => {
+      state.facts[0].content = 'Run pnpm test.'
+      state.facts[0].sources[0].quote = 'Run pnpm test.'
+      return state
+    })
+    const changed = await snapshot()
+    const source = changed.memories.find(fact => fact.id === changed.wiki[0].sourceIds[0])!
+    assert.equal(source.content, 'Run pnpm test.')
+    assert.equal(source.sources[0].quote, 'Run pnpm test.')
+    value(await f.client.remote.dreamingUi.forget({ ...root, id: 'first' }))
+    assert.deepEqual((await snapshot()).wiki, [{ ...commands, links: [] }])
+    const restored = value(await f.client.remote.dreamingUi.rollback({ ...root, revision: second.revision }))
+    const after = await snapshot()
+    assert.equal(after.revision, restored.revision)
+    assert.deepEqual(after.wiki, [{ ...index, links: ['commands'] }, commands])
+    assert.equal(after.memories.find(fact => fact.id === 'first')?.content, 'Run npm test in this project.')
+    assert.equal(value(await f.client.remote.dreamingUi.organizeWiki({ projectRoot: f.secondRoot })).revision, 0)
+    f.host.remoteAccess.registerPolicy('dreaming-test-guest', { bindings: () => [{
+      resource: { kind: 'global' }, role: { name: 'wiki-probe', resource: 'global', actions: ['dreamingUi/organizeWiki'] },
+    }] })
+    f.setPeer({ kind: 'dreaming-test-guest' })
+    failure(await f.client.remote.dreamingUi.organizeWiki(root), 'dreaming/forbidden')
   } finally { await f.close() }
 })

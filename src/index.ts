@@ -9,9 +9,12 @@ import type {} from '@deepseek-ai/dsh-working-directory'
 import { Config, configSchema, type ConfigInput, type DreamingConfig } from './config.ts'
 import { CoreError, DreamEngine, MemoryStore, evidenceBudget, readMemory, recallView, renderIndex, searchMemory, type MemoryLevel, type RecallView } from './core/index.ts'
 import { collectTranscripts } from './transcripts.ts'
+import { organizeWiki, visiblePages } from './core/wiki.ts'
 import { generateInSession } from './worker.ts'
 import { registerTools } from './tools.ts'
 import { registerUiBridge } from './ui-bridge.ts'
+import type { UpdateStatus } from './ui-protocol.ts'
+import { checkForUpdate, installedVersion } from './update-check.ts'
 
 export { Config } from './config.ts'
 export type { DreamingConfig, ConfigInput } from './config.ts'
@@ -22,6 +25,8 @@ declare module '@deepseek-ai/cordis' {
 
 interface Project { root: string; store: MemoryStore }
 export interface LastRun { at: string; error: string | null }
+/** The Web page may mount often; one manifest fetch per half hour is plenty. */
+const UPDATE_CHECK_TTL_MS = 30 * 60 * 1000
 
 /** Match a canonical path without accepting sibling-prefix matches. */
 function contains(root: string, path: string): boolean {
@@ -40,6 +45,7 @@ export class DreamingService extends Service {
   private readonly operations = new Map<string, Promise<unknown>>()
   private readonly lastRuns = new Map<string, LastRun>()
   private readonly delays = new Map<string, NodeJS.Timeout>()
+  private updateCheck: { at: number; result: UpdateStatus } | null = null
 
   constructor(ctx: Context, config: ConfigInput) {
     super(ctx, 'dreaming')
@@ -145,6 +151,14 @@ export class DreamingService extends Service {
     })
   }
 
+  async organizeWiki(projectRoot: string, signal?: AbortSignal) {
+    return this.exclusive(projectRoot, signal, async (project, control) => {
+      const state = await organizeWiki(project.store, this.config, (system, payload) =>
+        generateInSession(this.ctx, this.config, project.root, system, payload, control), control)
+      return { revision: state.revision }
+    })
+  }
+
   /** Current revision, recent failures and available rollback targets. */
   async status(projectRoot: string) {
     const project = this.project(projectRoot)
@@ -155,11 +169,21 @@ export class DreamingService extends Service {
   /** Canonical allowlisted roots exposed to the local management UI. */
   listProjects(): string[] { return [...this.projects.keys()] }
 
+  /** Compare the installed version with the plugin's published manifest; failures are returned as data. */
+  async checkUpdate(force = false, signal?: AbortSignal): Promise<UpdateStatus> {
+    const cached = this.updateCheck
+    if (!force && cached && Date.now() - cached.at < UPDATE_CHECK_TTL_MS) return cached.result
+    const result = await checkForUpdate({ version: installedVersion(), signal })
+    // Only a successful read is worth caching: the next page load retries a transient failure.
+    if (result.error === null) this.updateCheck = { at: Date.now(), result }
+    return result
+  }
+
   /** A consistent current revision and its bounded notes, including retired notes. */
   async snapshot(projectRoot: string) {
     const project = this.project(projectRoot)
     const state = await this.view(project)
-    return { ...await this.describe(project, state), memories: state.facts, hiddenMemoryIds: state.hiddenMemoryIds ?? [] }
+    return { ...await this.describe(project, state), wiki: visiblePages(state), memories: state.facts, hiddenMemoryIds: state.hiddenMemoryIds ?? [] }
   }
 
   private async describe(project: Project, state: RecallView) {

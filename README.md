@@ -12,7 +12,7 @@ Dreaming 是一个面向 **DeepSeek Harness（dsh）** 的社区插件。它回�
 
 | 项目 | 当前实现 |
 |---|---|
-| 插件版本 | `0.3.1` |
+| 插件版本 | `0.4.0` |
 | 兼容基线 | **DeepSeek Harness `0.2.2-rc.1`** |
 | 运行环境 | Node.js `>=24.9.0` |
 | 使用入口 | Web 侧栏「记忆」、七个智能体工具、可选后台任务 |
@@ -32,7 +32,7 @@ Dreaming 是一个面向 **DeepSeek Harness（dsh）** 的社区插件。它回�
 npm ci
 npm run check
 npm pack
-dsh plugin --profile web add /absolute/path/dsh-plugin-dreaming-0.3.1.tgz
+dsh plugin --profile web add /absolute/path/dsh-plugin-dreaming-0.4.0.tgz
 ```
 
 把包路径替换为实际生成文件的绝对路径。这里以现有 `web` 配置为例；使用其他配置时，安装和启动须选择同一个配置。更新已安装的代码后，重启 dsh 并刷新浏览器。
@@ -67,6 +67,8 @@ dsh web --patch /absolute/path/to/dreaming.patch.yml
 在启用的项目中完成至少一轮对话，再打开侧栏「**记忆**」，选择项目并点击「**开始复盘**」。也可以让智能体调用 `dream_run`。当前尚未结束的回合会留到下一次复盘。
 
 面板支持中英文与明暗主题，可以搜索和筛选记忆、查看原文证据、移除记录及恢复历史版本。工具或后台任务更新数据后，点击「刷新」读取最新状态。具体操作见[中文使用说明](README.zh-CN.md#在界面中查看和管理记忆)。
+
+面板右上角显示当前插件版本，并提供「**检查更新**」按钮，打开页面时也会自动检查一次。检查只读取公开清单中的版本号，不发送项目或记忆数据；结果按 30 分钟缓存，网络失败不会显示为面板错误。发现新版本时会显示当前版本、最新版本和仓库链接。该功能只做提示，不会自动改写已安装依赖：本项目通过 GitHub 固定提交安装时，需要重新打包安装；发布到 npm 后可使用 dsh 自带的插件更新流程。
 
 需要自动复盘时，设置 `autoRunAfterTurn: true`，或把 `autoRunIntervalMinutes` 设为正数。定时任务只在 dsh Host 运行期间执行；重启后可按持久化游标继续，但不会补跑错过的每个定时点。
 
@@ -128,6 +130,7 @@ flowchart TB
 | 智能体工具 | 注册七个工具，将调用会话映射到允许的项目 | [src/tools.ts](src/tools.ts) |
 | Web 接口 | 所有者权限、准确项目根目录校验、Host/Client 共用的请求与结果协议 | [ui-bridge.ts](src/ui-bridge.ts) · [ui-protocol.ts](src/ui-protocol.ts) |
 | Web 客户端 | React 面板、项目切换、本地筛选、证据详情和管理操作 | [client/source.js](client/source.js) · [locale/](locale/) |
+| 更新检查 | 读取自身版本、请求公开清单、语义化版本比较与非抛出式结果 | [src/update-check.ts](src/update-check.ts) |
 
 Web 通过 dsh 已有的类型化 Remote 通道调用 `dreamingUi`，不单独启动 HTTP 服务。桥接仅在 `typert` 可用时注册，因此终端或无界面配置仍可使用工具、后台复盘和索引注入。浏览器只允许已认证的 Harness 所有者选择配置内的准确项目根目录；工具根据调用会话的当前工作目录确定项目，没有跨项目路径参数。
 
@@ -163,6 +166,8 @@ Web 通过 dsh 已有的类型化 Remote 通道调用 `dreamingUi`，不单独�
 `supported` 表示引用支持限定范围内的陈述；`uncertain` 保留不确定性，两者都属于有效记忆。仅有助手断言不能建立 `supported` 记忆。`stale` 表示已退役，不进入工具搜索和自动索引，但仍可在面板或按 ID 读取时查看。
 
 原文匹配证明引用存在，语义复核检查解释是否合理；两者都不保证模型结论永久正确。
+
+模型引用只缺少一层 JSON 转义时，程序仅在补回转义后的片段能逐字匹配同一来源时采用，并将该原文片段同时用于复核和存储。无法匹配、跨会话或跨事件的引用仍会被拒绝。
 
 ## 后续会话如何使用记忆
 
@@ -287,15 +292,18 @@ node scripts/verify-package.mjs
 
 `npm run check` 依次执行类型检查、测试和构建；安装包核验单独执行，检查打包文件、元数据、真实 ESM 入口及 Client 工厂。测试采用脚本化模型适配器，不需要在线密钥。
 
+发布新版本时必须同步递增 `package.json` 的 `version`（并更新 `package-lock.json` 与安装文件名）。「检查更新」以公开清单中的 `version` 为准；版本号不变时不会提示更新。
+
 | 测试文件 | 主要覆盖范围 |
 |---|---|
 | [config.test.ts](tests/config.test.ts) | 默认值、路径格式、未知字段和预算约束 |
 | [core.test.ts](tests/core.test.ts) | 引用、复核、修正/退役、游标、预算、写锁、校验和与恢复 |
 | [transcripts.test.ts](tests/transcripts.test.ts) | 完整回合、项目/符号链接隔离、分叉历史和内容过滤 |
 | [runtime.test.ts](tests/runtime.test.ts) | 真实 dsh Agent 循环、持久化工作会话、召回、工具、取消和卸载 |
-| [ui-bridge.test.ts](tests/ui-bridge.test.ts) | Client/Host 通道、权限与协议校验、共用操作和客户端激活 |
+| [ui-bridge.test.ts](tests/ui-bridge.test.ts) | Client/Host 通道、权限与协议校验、共用操作、更新检查权限与缓存、客户端激活 |
+| [update-check.test.ts](tests/update-check.test.ts) | 语义化版本比较、公开清单成功与失败、多个清单源回退 |
 
-已有的 **2026-11-08 验证记录**包含 55 项测试、真实 dsh Web 页面检查，以及一次合成项目指令的在线模型提取与复核。具体环境、用量和边界见[验证记录](docs/verification.md)；这些结果证明所测流程可运行，不代表长期记忆质量基准。自动化检查配置见 [GitHub Actions](.github/workflows/ci.yml)，远程运行结果以实际 CI 为准。
+已有的 **2026-11-08 验证记录**包含当时的 55 项测试、真实 dsh Web 页面检查，以及一次合成项目指令的在线模型提取与复核；当前测试套件共 100 项。具体环境、用量和边界见[验证记录](docs/verification.md)；这些结果证明所测流程可运行，不代表长期记忆质量基准。自动化检查配置见 [GitHub Actions](.github/workflows/ci.yml)，远程运行结果以实际 CI 为准。
 
 ## 当前边界
 
