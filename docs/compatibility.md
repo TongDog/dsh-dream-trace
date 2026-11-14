@@ -1,6 +1,6 @@
 # DeepSeek Harness compatibility
 
-This standalone bundle, version **0.2.0**, targets **DeepSeek Harness 0.2.2-rc.1** and Node.js **24.9.0 or newer**. The exact prerelease is declared in `engines.dsh` and the DSH peer dependency versions. Compatibility with other DSH releases is not assumed: update the declarations only after running the consumer checks against that release.
+This standalone bundle, version **0.4.0**, targets **DeepSeek Harness 0.2.2-rc.1** and Node.js **24.9.0 or newer**. The exact prerelease is declared in `engines.dsh` and the DSH peer dependency versions. Compatibility with other DSH releases is not assumed: update the declarations only after running the consumer checks against that release.
 
 ## Package and activation
 
@@ -19,6 +19,8 @@ The Host bridge registers the `dreamingUi` namespace only when `typert` is avail
 Every Remote operation checks that the invocation principal is the Harness owner. Requests with a project parameter must name an exact configured root; the bridge neither resolves arbitrary paths supplied by a browser nor exposes project enumeration to shared-session guests. UI actions delegate to the same Dreaming service operations as model tools. The page adds explicit confirmation for record removal and version restoration. Remote or transport failure is shown as failure, followed by a state refresh because an interrupted response alone does not establish whether a write committed.
 
 The snapshot includes retired records for visual inspection. The default page filter, model-facing search, and injected index exclude them. Browser search filters the selected project's loaded snapshot by title, content, and evidence quotation. No client-side copy becomes authoritative memory.
+
+The Memory page also exposes an owner-only update check. It reads the installed version from the packaged manifest, tries public manifest feeds in order (GitHub Contents API, then raw.githubusercontent.com, then the npm registry once the package is published), and compares semantic versions without throwing on network failure. Results are cached for 30 minutes per Host process; a forced check bypasses the cache. Only the public manifest is fetched: no project, session, or memory data leaves the Host. The check never rewrites the installed dependency. A pinned GitHub commit install must be reinstalled from a new tarball, while a registry install can use dsh's own plugin manager update path.
 
 ## Runtime obligations
 
@@ -47,7 +49,7 @@ The tarball must contain `lib/index.js`, `lib/index.d.ts`, `client.js`, `cordis.
 For a consumer smoke test, use a dedicated temporary DSH home and profile, leaving the user's existing profile unchanged. With the tested DSH CLI on `PATH`:
 
 ```sh
-DSH_HOME=/absolute/path/to/test-home dsh plugin --profile dreaming-smoke add /absolute/path/to/dsh-plugin-dreaming-0.2.0.tgz
+DSH_HOME=/absolute/path/to/test-home dsh plugin --profile dreaming-smoke add /absolute/path/to/dsh-plugin-dreaming-0.4.0.tgz
 DSH_HOME=/absolute/path/to/test-home dsh --profile dreaming-smoke --dump-config
 ```
 

@@ -20,7 +20,7 @@ window.__ModuleLoader__.load({
 .dreaming-top,.dreaming-actions,.dreaming-row,.dreaming-tags,.dreaming-tabs{display:flex;align-items:center;gap:10px}.dreaming-top{justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:18px;margin-bottom:22px}
 .dreaming-muted{color:var(--dsw-alias-label-secondary)}.dreaming-small{font-size:12px}.dreaming-subtitle{margin-top:6px!important;max-width:630px}
 .dreaming-page button,.dreaming-page input,.dreaming-page select{font:inherit;color:inherit;line-height:1.4}.dreaming-page button{cursor:pointer}.dreaming-page button:disabled{cursor:default;opacity:.5}
-.dreaming-page button:focus-visible,.dreaming-page input:focus-visible,.dreaming-page select:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:3px}
+.dreaming-page button:focus-visible,.dreaming-page input:focus-visible,.dreaming-page select:focus-visible,.dreaming-page a:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:3px}
 .dreaming-button{border:1px solid var(--dsw-alias-border-l2);border-radius:9px;background:var(--dsw-alias-bg-base);padding:8px 13px;white-space:nowrap;min-height:36px}
 .dreaming-button:hover:not(:disabled){background:var(--dsw-alias-bg-layer-1)}.dreaming-button.primary{background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-primary-foreground);border-color:transparent}.dreaming-button.danger{color:var(--dsw-alias-state-error-primary)}
 .dreaming-field{display:grid;gap:6px}.dreaming-select,.dreaming-search{border:1px solid var(--dsw-alias-border-l2);border-radius:9px;background:var(--dsw-alias-bg-base);padding:9px 12px;min-width:0;min-height:39px}.dreaming-project{width:min(100%,660px);margin-bottom:20px}
@@ -35,6 +35,8 @@ window.__ModuleLoader__.load({
 @media(forced-colors:active){.dreaming-switch{appearance:auto}.dreaming-switch:before{display:none}}
 .dreaming-list-meta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:12px 0}.dreaming-list-meta label{display:inline-flex;align-items:center;gap:6px}
 .dreaming-empty{padding:42px 22px;text-align:center;border:1px dashed var(--dsw-alias-border-l2);border-radius:12px;color:var(--dsw-alias-label-secondary)}.dreaming-empty strong{display:block;color:var(--dsw-alias-label-primary);margin-bottom:8px}.dreaming-empty svg{margin-bottom:12px}.dreaming-message{padding:12px 15px;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-layer-1);margin-bottom:14px;overflow-wrap:anywhere}.dreaming-error{color:var(--dsw-alias-state-error-primary)}.dreaming-confirm{margin-top:15px;padding:15px;border:1px solid var(--dsw-alias-state-warn-primary);border-radius:10px}.dreaming-confirm .dreaming-actions{margin-top:12px}.dreaming-history{display:grid;gap:10px}.dreaming-history-row{display:flex;align-items:center;gap:18px;justify-content:space-between;padding:16px 20px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px}.dreaming-history-row strong{font-size:16px}.dreaming-history-row .dreaming-muted{margin-top:3px}.dreaming-caption{margin:14px 0!important}.dreaming-spin{display:inline-block;animation:dreaming-pulse 1.4s ease-in-out infinite}@keyframes dreaming-pulse{50%{opacity:.4}}@media(prefers-reduced-motion:reduce){.dreaming-spin{animation:none}}@media(max-width:900px){.dreaming-page{padding:22px 20px}.dreaming-workspace{grid-template-columns:1fr}.dreaming-list{max-height:380px}.dreaming-stats{gap:8px}.dreaming-stat{padding:12px}.dreaming-top .dreaming-actions{flex-wrap:wrap}}@media(max-width:480px){.dreaming-stats{grid-template-columns:repeat(2,1fr)}.dreaming-page{padding:18px 12px}.dreaming-history-row{align-items:flex-start;flex-wrap:wrap}}
+.dreaming-version{font-size:12px;color:var(--dsw-alias-label-secondary);white-space:nowrap}
+.dreaming-update{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;border-color:var(--dsw-alias-brand-primary)}.dreaming-update>div{min-width:0}.dreaming-update p{margin-top:4px!important}.dreaming-update .dreaming-actions{margin-left:auto}.dreaming-update a{text-decoration:none;display:inline-flex;align-items:center}.dreaming-update-note{overflow-wrap:anywhere;margin-bottom:12px!important}
 `;
     function Icon({ size = 20 }) {
       return h('svg', { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
@@ -64,6 +66,9 @@ window.__ModuleLoader__.load({
       const [error, setError] = useState('');
       const [notice, setNotice] = useState(null);
       const [confirmation, setConfirmation] = useState(null);
+      const [update, setUpdate] = useState(null);
+      const [updateBusy, setUpdateBusy] = useState(false);
+      const [updateDismissed, setUpdateDismissed] = useState(false);
       const alive = useRef(true);
       const version = useRef(0);
       const translate = useRef(t);
@@ -80,6 +85,20 @@ window.__ModuleLoader__.load({
         if (!result.ok) throw result.error;
         return result.value;
       }, [api]);
+      const checkUpdate = useCallback(async manual => {
+        setUpdateBusy(true);
+        try {
+          const value = await call('checkUpdate', { force: Boolean(manual) });
+          if (!alive.current) return;
+          setUpdate({ ...value, manual });
+          if (value.updateAvailable) setUpdateDismissed(false);
+        } catch (e) {
+          // An automatic check is silent: only a user-initiated request reports its failure.
+          if (alive.current) setUpdate(previous => ({ currentVersion: previous?.currentVersion || '', latestVersion: null, updateAvailable: false, checkedAt: '', projectUrl: '', error: e?.message || String(e), manual }));
+        } finally {
+          if (alive.current) setUpdateBusy(false);
+        }
+      }, [call]);
       const load = useCallback(async (root, clearError = true) => {
         if (!root) return;
         const requestVersion = ++version.current;
@@ -109,8 +128,9 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         alive.current = true;
         void loadProjects();
+        void checkUpdate(false);
         return () => { alive.current = false; ++version.current; };
-      }, [loadProjects]);
+      }, [loadProjects, checkUpdate]);
       useEffect(() => {
         ++version.current;
         setSnapshot(null);
@@ -173,7 +193,20 @@ window.__ModuleLoader__.load({
         h('style', null, css),
         h('div', { className: 'dreaming-top' },
           h('div', null, h('h1', null, t('panel')), h('p', { className: 'dreaming-muted dreaming-subtitle' }, t('subtitle'))),
-          h('div', { className: 'dreaming-actions' }, button(loading ? t('loading') : t('refresh'), () => void (project ? load(project) : loadProjects()), { disabled: busy || loading }), button(busy || snapshot?.running ? t('running') : t('dream'), () => void act('run'), { className: 'dreaming-button primary', disabled: !project || !snapshot || locked }))),
+          h('div', { className: 'dreaming-actions' },
+            update?.currentVersion && h('span', { className: 'dreaming-version' }, `v${update.currentVersion}`),
+            button(updateBusy ? t('checking') : t('checkUpdate'), () => void checkUpdate(true), { disabled: updateBusy }),
+            button(loading ? t('loading') : t('refresh'), () => void (project ? load(project) : loadProjects()), { disabled: busy || loading }),
+            button(busy || snapshot?.running ? t('running') : t('dream'), () => void act('run'), { className: 'dreaming-button primary', disabled: !project || !snapshot || locked }))),
+        update?.updateAvailable && !updateDismissed && h('div', { role: 'status', className: 'dreaming-message dreaming-update' },
+          h('div', null,
+            h('strong', null, t('updateAvailable')),
+            h('p', { className: 'dreaming-small dreaming-muted' }, `${t('currentVersion')} ${update.currentVersion} · ${t('latestVersion')} ${update.latestVersion}`)),
+          h('div', { className: 'dreaming-actions' },
+            h('a', { className: 'dreaming-button primary', href: update.projectUrl, target: '_blank', rel: 'noreferrer noopener' }, t('viewUpdate')),
+            button(t('dismiss'), () => setUpdateDismissed(true)))),
+        update?.error && update.manual && h('p', { role: 'status', className: 'dreaming-small dreaming-muted dreaming-update-note' }, `${t('updateCheckFailed')}: ${update.error}`),
+        update?.manual && !update.error && !update.updateAvailable && h('p', { role: 'status', className: 'dreaming-small dreaming-muted' }, t('updateCurrent')),
         error && h('div', { role: 'alert', className: 'dreaming-message dreaming-error' }, error),
         notice && h('div', { role: 'status', className: 'dreaming-message' }, notice.method === 'run'
           ? `${t('dreamDone')} ${t('created')}: ${notice.value.created} · ${t('updated')}: ${notice.value.updated} · ${t('retired')}: ${notice.value.retired}${notice.value.unchanged ? ` · ${t('unchanged')}` : ''}`

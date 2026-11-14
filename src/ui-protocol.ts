@@ -12,7 +12,13 @@ export const factRequest = projectRequest.extend({ id }).strict()
 export const visibilityRequest = factRequest.extend({ visible: z.boolean(), expectedRevision: count }).strict()
 export const levelRequest = factRequest.extend({ level: levelSchema, expectedRevision: count.optional() }).strict()
 export const rollbackRequest = projectRequest.extend({ revision: count }).strict()
+export const updateCheckRequest = z.object({ force: z.boolean().default(false) }).strict()
 const revisionResult = z.object({ revision: count }).strict()
+const updateStatusResult = z.object({
+  currentVersion: z.string().min(1).max(64), latestVersion: z.string().min(1).max(64).nullable(),
+  updateAvailable: z.boolean(), checkedAt: z.iso.datetime(), projectUrl: z.string().min(1).max(2048),
+  error: z.string().min(1).max(2000).nullable(),
+}).strict()
 const statusResult = z.object({
   projectRoot: root, storageDirectory: z.string(), revision: count, facts: count, running: z.boolean(),
   lastRun: z.object({ at: z.iso.datetime(), error: z.string().nullable() }).strict().nullable(),
@@ -31,12 +37,15 @@ export type FactRequest = z.infer<typeof factRequest>
 export type VisibilityRequest = z.infer<typeof visibilityRequest>
 export type LevelRequest = z.infer<typeof levelRequest>
 export type RollbackRequest = z.infer<typeof rollbackRequest>
+export type UpdateCheckRequest = z.infer<typeof updateCheckRequest>
 export type MemorySnapshot = z.infer<typeof snapshotResult>
 export type MemoryStatus = z.infer<typeof statusResult>
 export type DreamingRunResult = z.infer<typeof runResult>
+export type UpdateStatus = z.infer<typeof updateStatusResult>
 
 export interface DreamingUiRemote {
   projects(signal?: AbortSignal): Promise<RemoteResult<string[]>>
+  checkUpdate(request: UpdateCheckRequest, signal?: AbortSignal): Promise<RemoteResult<UpdateStatus>>
   snapshot(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<MemorySnapshot>>
   status(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<MemoryStatus>>
   search(request: SearchRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>[]>>
@@ -64,6 +73,7 @@ function codec(name: string, schema: z.ZodType): TypertCodec {
 
 const definitions = {
   projects: { result: z.array(root) },
+  checkUpdate: { request: updateCheckRequest, result: updateStatusResult },
   snapshot: { request: projectRequest, result: snapshotResult },
   status: { request: projectRequest, result: statusResult },
   search: { request: searchRequest, result: z.array(visibleFactSchema) },

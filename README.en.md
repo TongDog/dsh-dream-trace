@@ -4,7 +4,7 @@
 
 **Codex support:** [Dream Trace](codex-plugin/README.md) is a standalone Codex plugin using hooks for evidence capture and MCP for recall, consolidation and rollback. It shares the memory core and does not require Harness. Build its standalone archive with `npm run pack:codex`.
 
-An independent project-memory plugin for **DeepSeek Harness 0.2.2-rc.1**, requiring **Node.js >=24.9.0**. Consolidates completed conversations into evidence-linked observations, corrects outdated notes, injects a bounded index into later sessions, and supports rollback. Version **0.2.0** adds a **Memory** page in the dsh Web sidebar for browsing and managing those records. It is not an official DeepSeek or Anthropic product.
+An independent project-memory plugin for **DeepSeek Harness 0.2.2-rc.1**, requiring **Node.js >=24.9.0**. Consolidates completed conversations into evidence-linked observations, corrects outdated notes, injects a bounded index into later sessions, and supports rollback. Version **0.4.0** adds an in-app update check to the **Memory** page in the dsh Web sidebar. It is not an official DeepSeek or Anthropic product.
 
 [Install](#install-and-enable) · [Memory page](#memory-page) · [Operations](#operations) · [Architecture](#architecture) · [Configuration](#configuration) · [Development](#development-and-verification)
 
@@ -16,7 +16,7 @@ Build and install a tarball from this repository:
 npm ci
 npm run check
 npm pack
-dsh plugin --profile web add /absolute/path/dsh-plugin-dreaming-0.3.1.tgz
+dsh plugin --profile web add /absolute/path/dsh-plugin-dreaming-0.4.0.tgz
 ```
 
 The bundle starts with an empty allowlist. Create a workspace overlay `dreaming.patch.yml`:
@@ -53,6 +53,8 @@ Open **Memory** in the dsh Web sidebar, then select an enabled project. The page
 
 An empty project list means `projectRoots` has not been configured. An enabled project with no records needs a completed conversation followed by a Dreaming run. The page displays operation failures without claiming that an update succeeded. Memory text is rendered as text, not executable markup.
 
+The header shows the installed plugin version and a **Check for updates** button, and the page also checks once when it opens. The request fetches only the public manifest version from the project repository — no project or memory data is sent — and results are cached for 30 minutes. When a newer version exists, a banner shows the installed and latest versions with a link to the repository. The check never rewrites the installed dependency: a pinned GitHub commit install must be reinstalled from a new tarball, while a published npm package can use dsh's own plugin update flow.
+
 The Web management API is restricted to the authenticated Harness owner; shared-session guests cannot enumerate projects or read or change memory through it. Project selection is limited to exact configured roots. The Web bridge is optional: headless and terminal profiles retain the same seven tools and background processing without a sidebar or API gateway.
 
 ## Operations
@@ -87,6 +89,7 @@ The plugin separates a **dsh adapter layer**, a **memory core**, and an **option
 | [src/tools.ts](src/tools.ts) | Seven agent tools scoped to the caller's current project |
 | [src/ui-bridge.ts](src/ui-bridge.ts) / [src/ui-protocol.ts](src/ui-protocol.ts) | Optional owner-only Remote service and shared strict request/result codecs |
 | [client/source.js](client/source.js) / [locale/](locale/) | React panel, snapshot filtering, evidence details, and bilingual labels |
+| [src/update-check.ts](src/update-check.ts) | Installed version, public manifest feed, semantic comparison, non-throwing status |
 
 The Web client uses dsh's existing typed Remote transport, with no separate HTTP server. The bridge registers only when `typert` is available. Agent tools infer the project from the calling session; Web requests must select an exact configured root.
 
@@ -120,4 +123,6 @@ node scripts/verify-package.mjs
 
 `npm run check` runs type checking, tests, and the build; the package verification script is a separate check. The build emits Host ESM code and declarations into `lib/`, then bundles `client/source.js`, locale dictionaries, and strict Remote codecs into the distributed `client.js` with esbuild. Edit `client/source.js` and rebuild to change the panel. React comes from dsh's browser module table.
 
-Tests cover evidence validation, correction, rollback, cancellation, concurrent writers, project isolation, real DSH sessions, durable recall, tool schemas, optional Web Remote access, and unload cleanup. Scripted adapters exercise the actual DSH loop without online credentials. They establish implementation behavior, not live-model memory quality or browser rendering. See [compatibility requirements](docs/compatibility.md) and the [verification record](docs/verification.md) for the checks actually completed.
+Bump `version` in `package.json` (and update `package-lock.json` and install filenames) for every release. The update check compares the public manifest's `version`; without a bump it reports no update.
+
+Tests cover evidence validation, correction, rollback, cancellation, concurrent writers, project isolation, real DSH sessions, durable recall, tool schemas, optional Web Remote access, update-check version comparison and feed failures, and unload cleanup. Scripted adapters exercise the actual DSH loop without online credentials. They establish implementation behavior, not live-model memory quality or browser rendering. See [compatibility requirements](docs/compatibility.md) and the [verification record](docs/verification.md) for the checks actually completed.

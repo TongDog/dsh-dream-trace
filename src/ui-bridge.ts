@@ -6,11 +6,11 @@ import { z } from 'zod'
 import { CoreError } from './core/types.ts'
 import type { DreamingService } from './index.ts'
 import {
-  dreamingRemoteContribution, factRequest, levelRequest, projectRequest, rollbackRequest, searchRequest, visibilityRequest,
-  type FactRequest, type LevelRequest, type ProjectRequest, type RollbackRequest, type SearchRequest, type VisibilityRequest,
+  dreamingRemoteContribution, factRequest, levelRequest, projectRequest, rollbackRequest, searchRequest, updateCheckRequest, visibilityRequest,
+  type FactRequest, type LevelRequest, type ProjectRequest, type RollbackRequest, type SearchRequest, type UpdateCheckRequest, type VisibilityRequest,
 } from './ui-protocol.ts'
 
-export type DreamingUiOperations = Pick<DreamingService, 'organizeWiki' | 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'setLevel' | 'setVisibility' | 'forget' | 'rollback'>
+export type DreamingUiOperations = Pick<DreamingService, 'organizeWiki' | 'listProjects' | 'snapshot' | 'status' | 'search' | 'read' | 'run' | 'setLevel' | 'setVisibility' | 'forget' | 'rollback' | 'checkUpdate'>
 
 declare module '@deepseek-ai/cordis' {
   interface Context { dreamingUi: DreamingUiBridge }
@@ -34,6 +34,10 @@ export class DreamingUiBridge extends TypertRemoteService {
   projects(signal: AbortSignal): string[] {
     this.owner(signal)
     return this.operations.listProjects()
+  }
+
+  checkUpdate(request: UpdateCheckRequest, signal: AbortSignal) {
+    return this.guarded(updateCheckRequest, request, signal, input => this.operations.checkUpdate(input.force, signal))
   }
 
   snapshot(request: ProjectRequest, signal: AbortSignal) {
@@ -92,8 +96,20 @@ export class DreamingUiBridge extends TypertRemoteService {
     if (!this.operations.listProjects().includes(parsed.data.projectRoot)) {
       throw new RemoteError('dreaming/project-not-enabled', 'Project is not enabled in Dreaming configuration.', {})
     }
+    return this.execute(operation, parsed.data, signal)
+  }
+
+  /** Owner-guarded call for operations that are not scoped to one project. */
+  private async guarded<Input, Output>(schema: z.ZodType<Input>, raw: unknown, signal: AbortSignal, operation: (input: Input) => Promise<Output>): Promise<Output> {
+    this.owner(signal)
+    const parsed = schema.safeParse(raw)
+    if (!parsed.success) throw new RemoteError('gateway/bad-request', 'Invalid Dreaming request.', {})
+    return this.execute(operation, parsed.data, signal)
+  }
+
+  private async execute<Input, Output>(operation: (input: Input) => Promise<Output>, input: Input, signal: AbortSignal): Promise<Output> {
     try {
-      const result = await operation(parsed.data)
+      const result = await operation(input)
       signal.throwIfAborted()
       return result
     } catch (error) {

@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-dreaming",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Evidence-linked background memory consolidation for DeepSeek Harness",
   "type": "module",
   "license": "MIT",

@@ -2,6 +2,7 @@ import { Context, Service } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import { type ConfigInput, type DreamingConfig } from './config.ts';
 import { type MemoryLevel } from './core/index.ts';
+import type { UpdateStatus } from './ui-protocol.ts';
 export { Config } from './config.ts';
 export type { DreamingConfig, ConfigInput } from './config.ts';
 declare module '@deepseek-ai/cordis' {
@@ -64,6 +65,7 @@ export declare class DreamingService extends Service {
     private readonly operations;
     private readonly lastRuns;
     private readonly delays;
+    private updateCheck;
     constructor(ctx: Context, config: ConfigInput);
     protected [Service.init](): Promise<void>;
     /** Resolve only the caller's current, explicitly enabled local project. */
@@ -101,6 +103,8 @@ export declare class DreamingService extends Service {
     }>;
     /** Canonical allowlisted roots exposed to the local management UI. */
     listProjects(): string[];
+    /** Compare the installed version with the plugin's published manifest; failures are returned as data. */
+    checkUpdate(force?: boolean, signal?: AbortSignal): Promise<UpdateStatus>;
     /** A consistent current revision and its bounded notes, including retired notes. */
     snapshot(projectRoot: string): Promise<{
         wiki: {

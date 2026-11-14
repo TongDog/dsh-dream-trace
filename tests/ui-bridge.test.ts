@@ -19,6 +19,7 @@ import type { PeerId, PeerScope, Principal, RemoteResult } from '@deepseek-ai/ds
 import Dreaming from '../src/index.ts'
 import { MemoryStore, type MemoryFact } from '../src/core/index.ts'
 import { dreamingClientContribution, type DreamingUiRemote } from '../src/ui-protocol.ts'
+import { installedVersion } from '../src/update-check.ts'
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface PrincipalMap { 'dreaming-test-guest': { kind: 'dreaming-test-guest' } }
@@ -122,6 +123,41 @@ test('official Client mount and Host gateway expose complete scoped snapshots an
     assert.equal(value(await ui.search({ projectRoot: f.projectRoot, query: 'test' })).length, 1)
     assert.equal(value(await ui.snapshot({ projectRoot: f.secondRoot })).memories.length, 0)
   } finally { await f.close() }
+})
+
+test('the update check is owner-only, owner-cached, and decodes its strict result', { timeout: 30000 }, async () => {
+  const f = await fixture()
+  const original = globalThis.fetch
+  let calls = 0
+  try {
+    globalThis.fetch = (async () => {
+      calls += 1
+      return { ok: true, status: 200, headers: { get: () => null }, json: async () => ({ version: calls === 1 ? '9.9.9' : '9.9.10' }) }
+    }) as unknown as typeof fetch
+    const ui = f.client.remote.dreamingUi
+    const first = value(await ui.checkUpdate({ force: true }))
+    assert.equal(first.currentVersion, installedVersion())
+    assert.equal(first.latestVersion, '9.9.9')
+    assert.equal(first.updateAvailable, true)
+    assert.equal(first.error, null)
+    assert.equal(first.projectUrl, 'https://github.com/TongDog/dsh-dream-trace')
+    assert.doesNotThrow(() => new Date(first.checkedAt).toISOString())
+    assert.deepEqual(value(await ui.checkUpdate({ force: false })), first, 'the second call must be served from the owner cache')
+    assert.equal(calls, 1)
+    const forced = value(await ui.checkUpdate({ force: true }))
+    assert.equal(forced.latestVersion, '9.9.10')
+    assert.equal(calls, 2)
+    failure(await ui.checkUpdate({ force: 'yes' } as never), 'gateway/input-invalid')
+    failure(await ui.checkUpdate({ force: false, extra: true } as never), 'gateway/input-invalid')
+    f.host.remoteAccess.registerPolicy('dreaming-test-guest', { bindings: () => [{
+      resource: { kind: 'global' }, role: { name: 'update-probe', resource: 'global', actions: ['dreamingUi/checkUpdate'] },
+    }] })
+    f.setPeer({ kind: 'dreaming-test-guest' })
+    failure(await ui.checkUpdate({ force: true }), 'dreaming/forbidden')
+  } finally {
+    globalThis.fetch = original
+    await f.close()
+  }
 })
 
 test('the bridge rejects guest users, path substitution, unknown fields, and malformed writes before changing memory', { timeout: 30000 }, async () => {

@@ -30,6 +30,17 @@ export declare const rollbackRequest: z.ZodObject<{
     projectRoot: z.ZodString;
     revision: z.ZodNumber;
 }, z.core.$strict>;
+export declare const updateCheckRequest: z.ZodObject<{
+    force: z.ZodDefault<z.ZodBoolean>;
+}, z.core.$strict>;
+declare const updateStatusResult: z.ZodObject<{
+    currentVersion: z.ZodString;
+    latestVersion: z.ZodNullable<z.ZodString>;
+    updateAvailable: z.ZodBoolean;
+    checkedAt: z.ZodISODateTime;
+    projectUrl: z.ZodString;
+    error: z.ZodNullable<z.ZodString>;
+}, z.core.$strict>;
 declare const statusResult: z.ZodObject<{
     projectRoot: z.ZodString;
     storageDirectory: z.ZodString;
@@ -142,11 +153,14 @@ export type FactRequest = z.infer<typeof factRequest>;
 export type VisibilityRequest = z.infer<typeof visibilityRequest>;
 export type LevelRequest = z.infer<typeof levelRequest>;
 export type RollbackRequest = z.infer<typeof rollbackRequest>;
+export type UpdateCheckRequest = z.infer<typeof updateCheckRequest>;
 export type MemorySnapshot = z.infer<typeof snapshotResult>;
 export type MemoryStatus = z.infer<typeof statusResult>;
 export type DreamingRunResult = z.infer<typeof runResult>;
+export type UpdateStatus = z.infer<typeof updateStatusResult>;
 export interface DreamingUiRemote {
     projects(signal?: AbortSignal): Promise<RemoteResult<string[]>>;
+    checkUpdate(request: UpdateCheckRequest, signal?: AbortSignal): Promise<RemoteResult<UpdateStatus>>;
     snapshot(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<MemorySnapshot>>;
     status(request: ProjectRequest, signal?: AbortSignal): Promise<RemoteResult<MemoryStatus>>;
     search(request: SearchRequest, signal?: AbortSignal): Promise<RemoteResult<z.infer<typeof visibleFactSchema>[]>>;
